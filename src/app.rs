@@ -12,15 +12,15 @@ pub struct App {
 
 impl Default for App {
     fn default() -> Self {
-        Self::new(None).unwrap()
+        Self::new(ControlFlow::Poll).expect("Failed to create App.")
     }
 }
 
 impl App {
-    pub fn new(control_flow: Option<ControlFlow>) -> Result<Self, EventLoopError> {
+    pub fn new(control_flow: ControlFlow) -> Result<Self, EventLoopError> {
         let event_loop = EventLoop::new()?;
 
-        event_loop.set_control_flow(control_flow.unwrap_or(ControlFlow::Poll));
+        event_loop.set_control_flow(control_flow);
 
         Ok(Self {
             event_loop,
