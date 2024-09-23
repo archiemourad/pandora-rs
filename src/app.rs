@@ -8,6 +8,7 @@ use winit::{
 pub struct App {
     pub event_loop: EventLoop<()>,
     pub windows: std::collections::HashMap<WindowId, Window>,
+    pub context: crate::context::WGPUContext,
 }
 
 impl Default for App {
@@ -25,6 +26,7 @@ impl App {
         Ok(Self {
             event_loop,
             windows: std::collections::HashMap::new(),
+            context: crate::context::WGPUContext::default(),
         })
     }
 
