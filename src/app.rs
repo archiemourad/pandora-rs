@@ -1,24 +1,16 @@
-use winit::{
-    error::{EventLoopError, OsError},
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder, WindowId},
-};
-
 pub struct App {
-    pub event_loop: EventLoop<()>,
-    pub windows: std::collections::HashMap<WindowId, Window>,
+    pub event_loop: winit::event_loop::EventLoop<()>,
+    pub windows: std::collections::HashMap<winit::window::WindowId, winit::window::Window>,
     pub context: crate::context::WGPUContext,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self::new(ControlFlow::Poll).expect("Failed to create App.")
-    }
-}
-
 impl App {
-    pub fn new(control_flow: ControlFlow) -> Result<Self, EventLoopError> {
+    pub fn new(
+        control_flow: winit::event_loop::ControlFlow,
+    ) -> Result<Self, crate::error::AppError> {
+        use crate::context::{WGPUContext, WGPUContextConfiguration};
+        use winit::event_loop::EventLoop;
+
         let event_loop = EventLoop::new()?;
 
         event_loop.set_control_flow(control_flow);
@@ -26,7 +18,7 @@ impl App {
         Ok(Self {
             event_loop,
             windows: std::collections::HashMap::new(),
-            context: crate::context::WGPUContext::default(),
+            context: WGPUContext::new(WGPUContextConfiguration::default())?,
         })
     }
 
@@ -35,7 +27,9 @@ impl App {
         title: &str,
         width: u32,
         height: u32,
-    ) -> Result<WindowId, OsError> {
+    ) -> Result<winit::window::WindowId, winit::error::OsError> {
+        use winit::window::WindowBuilder;
+
         let window = WindowBuilder::new()
             .with_title(title)
             .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
@@ -48,7 +42,9 @@ impl App {
         Ok(window_id)
     }
 
-    pub fn run(mut self) -> Result<(), EventLoopError> {
+    pub fn run(mut self) -> Result<(), winit::error::EventLoopError> {
+        use winit::event::{Event, WindowEvent};
+
         self.event_loop.run(move |event, elwt| match event {
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,

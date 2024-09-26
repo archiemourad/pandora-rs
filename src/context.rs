@@ -1,10 +1,10 @@
-pub struct WGPUContextConfiguration {
+pub struct WGPUContextConfiguration<'a, 'b> {
     pub instance: wgpu::InstanceDescriptor,
-    pub adapter: wgpu::RequestAdapterOptions<'static, 'static>,
-    pub device: wgpu::DeviceDescriptor<'static>,
+    pub adapter: wgpu::RequestAdapterOptions<'a, 'b>,
+    pub device: wgpu::DeviceDescriptor<'a>,
 }
 
-impl Default for WGPUContextConfiguration {
+impl<'a, 'b> Default for WGPUContextConfiguration<'a, 'b> {
     fn default() -> Self {
         Self::new(
             wgpu::InstanceDescriptor {
@@ -26,11 +26,11 @@ impl Default for WGPUContextConfiguration {
     }
 }
 
-impl WGPUContextConfiguration {
+impl<'a, 'b> WGPUContextConfiguration<'a, 'b> {
     pub fn new(
         instance: wgpu::InstanceDescriptor,
-        adapter: wgpu::RequestAdapterOptions<'static, 'static>,
-        device: wgpu::DeviceDescriptor<'static>,
+        adapter: wgpu::RequestAdapterOptions<'a, 'b>,
+        device: wgpu::DeviceDescriptor<'a>,
     ) -> Self {
         Self {
             instance,
@@ -47,17 +47,14 @@ pub struct WGPUContext {
     pub queue: wgpu::Queue,
 }
 
-impl Default for WGPUContext {
-    fn default() -> Self {
-        Self::new(WGPUContextConfiguration::default()).expect("Failed to create WGPU context.")
-    }
-}
-
 impl WGPUContext {
-    pub fn new(config: WGPUContextConfiguration) -> Result<Self, wgpu::RequestDeviceError> {
+    pub fn new(config: WGPUContextConfiguration) -> Result<Self, crate::error::WGPUContextError> {
+        use crate::error::WGPUContextError;
+
         let instance = wgpu::Instance::new(config.instance);
 
-        let adapter = pollster::block_on(instance.request_adapter(&config.adapter)).unwrap();
+        let adapter = pollster::block_on(instance.request_adapter(&config.adapter))
+            .ok_or(WGPUContextError::AdapterNotFound)?;
 
         let (device, queue) = pollster::block_on(adapter.request_device(&config.device, None))?;
 
