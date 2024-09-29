@@ -1,7 +1,7 @@
 pub struct App {
     pub event_loop: winit::event_loop::EventLoop<()>,
     pub windows: std::collections::HashMap<winit::window::WindowId, winit::window::Window>,
-    pub context: crate::context::WGPUContext,
+    pub context: std::sync::Arc<crate::context::WGPUContext>,
 }
 
 impl App {
@@ -9,6 +9,7 @@ impl App {
         control_flow: winit::event_loop::ControlFlow,
     ) -> Result<Self, crate::error::AppError> {
         use crate::context::{WGPUContext, WGPUContextConfiguration};
+        use std::sync::Arc;
         use winit::event_loop::EventLoop;
 
         let event_loop = EventLoop::new()?;
@@ -18,7 +19,7 @@ impl App {
         Ok(Self {
             event_loop,
             windows: std::collections::HashMap::new(),
-            context: WGPUContext::new(WGPUContextConfiguration::default())?,
+            context: Arc::new(WGPUContext::new(WGPUContextConfiguration::default())?),
         })
     }
 

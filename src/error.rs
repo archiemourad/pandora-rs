@@ -2,9 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum WGPUContextError {
-    #[error("Failed to find a suitable GPU adapter.")]
+    #[error("Failed to find a suitable GPU adapter")]
     AdapterNotFound,
-    #[error("Failed to request device: {:?}", 0)]
+    #[error("Failed to request device: {0:?}")]
     RequestDeviceError(#[from] wgpu::RequestDeviceError),
 }
 
