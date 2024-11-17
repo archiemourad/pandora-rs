@@ -1,10 +1,10 @@
-pub struct App {
+pub struct App<'window> {
     pub event_loop: winit::event_loop::EventLoop<()>,
-    pub windows: std::collections::HashMap<winit::window::WindowId, winit::window::Window>,
+    pub windows: std::collections::HashMap<winit::window::WindowId, crate::window::Window<'window>>,
     pub context: std::sync::Arc<crate::context::WGPUContext>,
 }
 
-impl App {
+impl<'window> App<'window> {
     pub fn new(
         control_flow: winit::event_loop::ControlFlow,
     ) -> Result<Self, crate::error::AppError> {
@@ -28,7 +28,9 @@ impl App {
         title: &str,
         width: u32,
         height: u32,
-    ) -> Result<winit::window::WindowId, winit::error::OsError> {
+    ) -> Result<winit::window::WindowId, crate::error::CreateWindowError> {
+        use crate::window::Window;
+        use std::sync::Arc;
         use winit::window::WindowBuilder;
 
         let window = WindowBuilder::new()
@@ -38,7 +40,10 @@ impl App {
 
         let window_id = window.id();
 
-        self.windows.insert(window_id, window);
+        self.windows.insert(
+            window_id,
+            Window::new(self.context.clone(), Arc::new(window))?,
+        );
 
         Ok(window_id)
     }
@@ -47,16 +52,36 @@ impl App {
         use winit::event::{Event, WindowEvent};
 
         self.event_loop.run(move |event, elwt| match event {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested,
-                window_id,
-            } => {
-                self.windows.remove(&window_id);
+            Event::WindowEvent { event, window_id } => match event {
+                WindowEvent::CloseRequested => {
+                    self.windows.remove(&window_id);
 
-                if self.windows.is_empty() {
-                    elwt.exit();
+                    if self.windows.is_empty() {
+                        elwt.exit();
+                    }
                 }
-            }
+                WindowEvent::Resized(new_size) => {
+                    if let Some(window) = self.windows.get_mut(&window_id) {
+                        window.resize(new_size);
+                    }
+                }
+                WindowEvent::RedrawRequested => {
+                    if let Some(window) = self.windows.get_mut(&window_id) {
+                        window.window().request_redraw();
+
+                        match window.render() {
+                            Ok(_) => {}
+
+                            Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                                window.resize(window.size)
+                            }
+                            Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
+                            Err(wgpu::SurfaceError::Timeout) => todo!(),
+                        }
+                    }
+                }
+                _ => (),
+            },
             _ => (),
         })
     }

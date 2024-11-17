@@ -15,3 +15,19 @@ pub enum AppError {
     #[error(transparent)]
     WGPUContextError(#[from] WGPUContextError),
 }
+
+#[derive(Error, Debug)]
+pub enum WindowError {
+    #[error(transparent)]
+    CreateSurfaceError(#[from] wgpu::CreateSurfaceError),
+    #[error("Surface is not supported by the adapter")]
+    SurfaceNotSupported,
+}
+
+#[derive(Error, Debug)]
+pub enum CreateWindowError {
+    #[error(transparent)]
+    OsError(#[from] winit::error::OsError),
+    #[error(transparent)]
+    WindowError(#[from] WindowError),
+}
