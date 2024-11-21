@@ -18,7 +18,7 @@ pub enum AppError {
 
 #[derive(Error, Debug)]
 pub enum WindowError {
-    #[error(transparent)]
+    #[error("Failed to create surface: {0:?}")]
     CreateSurfaceError(#[from] wgpu::CreateSurfaceError),
     #[error("Surface is not supported by the adapter")]
     SurfaceNotSupported,
