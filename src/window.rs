@@ -1,19 +1,21 @@
+use crate::{context::WGPUContext, error::WindowError};
+use std::{iter::once, sync::Arc};
+use winit::dpi::PhysicalSize;
+
 pub struct Window<'window> {
     pub surface: wgpu::Surface<'window>,
     pub config: wgpu::SurfaceConfiguration,
-    pub size: winit::dpi::PhysicalSize<u32>,
+    pub size: PhysicalSize<u32>,
 
-    context: std::sync::Arc<crate::context::WGPUContext>,
-    window: std::sync::Arc<winit::window::Window>,
+    context: Arc<WGPUContext>,
+    window: Arc<winit::window::Window>,
 }
 
 impl<'window> Window<'window> {
     pub fn new(
-        context: std::sync::Arc<crate::context::WGPUContext>,
-        window: std::sync::Arc<winit::window::Window>,
-    ) -> Result<Self, crate::error::WindowError> {
-        use crate::error::WindowError;
-
+        context: Arc<WGPUContext>,
+        window: Arc<winit::window::Window>,
+    ) -> Result<Self, WindowError> {
         let size = window.inner_size();
 
         let surface = context.instance.create_surface(window.clone())?;
@@ -55,7 +57,7 @@ impl<'window> Window<'window> {
         &self.window
     }
 
-    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
 
@@ -100,7 +102,7 @@ impl<'window> Window<'window> {
             });
         }
 
-        self.context.queue.submit(std::iter::once(encoder.finish()));
+        self.context.queue.submit(once(encoder.finish()));
         output.present();
 
         Ok(())

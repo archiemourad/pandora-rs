@@ -1,3 +1,5 @@
+use crate::error::WGPUContextError;
+
 pub struct WGPUContextConfiguration<'a, 'b> {
     pub instance: wgpu::InstanceDescriptor,
     pub adapter: wgpu::RequestAdapterOptions<'a, 'b>,
@@ -48,9 +50,7 @@ pub struct WGPUContext {
 }
 
 impl WGPUContext {
-    pub fn new(config: WGPUContextConfiguration) -> Result<Self, crate::error::WGPUContextError> {
-        use crate::error::WGPUContextError;
-
+    pub fn new(config: WGPUContextConfiguration) -> Result<Self, WGPUContextError> {
         let instance = wgpu::Instance::new(config.instance);
 
         let adapter = pollster::block_on(instance.request_adapter(&config.adapter))

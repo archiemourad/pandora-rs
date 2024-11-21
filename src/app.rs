@@ -1,24 +1,32 @@
+use crate::{
+    context::{WGPUContext, WGPUContextConfiguration},
+    error::{AppError, CreateWindowError},
+    window::Window,
+};
+use std::{collections::HashMap, sync::Arc};
+use winit::{
+    dpi::PhysicalSize,
+    error::EventLoopError,
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::{WindowBuilder, WindowId},
+};
+
 pub struct App<'window> {
-    pub event_loop: winit::event_loop::EventLoop<()>,
-    pub windows: std::collections::HashMap<winit::window::WindowId, crate::window::Window<'window>>,
-    pub context: std::sync::Arc<crate::context::WGPUContext>,
+    pub event_loop: EventLoop<()>,
+    pub windows: HashMap<WindowId, Window<'window>>,
+    pub context: Arc<WGPUContext>,
 }
 
 impl<'window> App<'window> {
-    pub fn new(
-        control_flow: winit::event_loop::ControlFlow,
-    ) -> Result<Self, crate::error::AppError> {
-        use crate::context::{WGPUContext, WGPUContextConfiguration};
-        use std::sync::Arc;
-        use winit::event_loop::EventLoop;
-
+    pub fn new(control_flow: ControlFlow) -> Result<Self, AppError> {
         let event_loop = EventLoop::new()?;
 
         event_loop.set_control_flow(control_flow);
 
         Ok(Self {
             event_loop,
-            windows: std::collections::HashMap::new(),
+            windows: HashMap::new(),
             context: Arc::new(WGPUContext::new(WGPUContextConfiguration::default())?),
         })
     }
@@ -28,14 +36,10 @@ impl<'window> App<'window> {
         title: &str,
         width: u32,
         height: u32,
-    ) -> Result<winit::window::WindowId, crate::error::CreateWindowError> {
-        use crate::window::Window;
-        use std::sync::Arc;
-        use winit::window::WindowBuilder;
-
+    ) -> Result<WindowId, CreateWindowError> {
         let window = WindowBuilder::new()
             .with_title(title)
-            .with_inner_size(winit::dpi::PhysicalSize::new(width, height))
+            .with_inner_size(PhysicalSize::new(width, height))
             .build(&self.event_loop)?;
 
         let window_id = window.id();
@@ -48,9 +52,7 @@ impl<'window> App<'window> {
         Ok(window_id)
     }
 
-    pub fn run(mut self) -> Result<(), winit::error::EventLoopError> {
-        use winit::event::{Event, WindowEvent};
-
+    pub fn run(mut self) -> Result<(), EventLoopError> {
         self.event_loop.run(move |event, elwt| match event {
             Event::WindowEvent { event, window_id } => match event {
                 WindowEvent::CloseRequested => {
