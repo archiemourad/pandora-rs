@@ -19,15 +19,13 @@ pub struct App<'window> {
 }
 
 impl<'window> App<'window> {
-    pub fn new(control_flow: ControlFlow) -> Result<Self, AppError> {
+    pub fn new(config: WGPUContextConfiguration) -> Result<Self, AppError> {
         let event_loop = EventLoop::new()?;
-
-        event_loop.set_control_flow(control_flow);
 
         Ok(Self {
             event_loop,
             windows: HashMap::new(),
-            context: Arc::new(WGPUContext::new(WGPUContextConfiguration::default())?),
+            context: Arc::new(WGPUContext::new(config)?),
         })
     }
 
@@ -52,7 +50,9 @@ impl<'window> App<'window> {
         Ok(window_id)
     }
 
-    pub fn run(mut self) -> Result<(), EventLoopError> {
+    pub fn run(mut self, control_flow: ControlFlow) -> Result<(), EventLoopError> {
+        self.event_loop.set_control_flow(control_flow);
+
         self.event_loop.run(move |event, elwt| match event {
             Event::WindowEvent { event, window_id } => match event {
                 WindowEvent::CloseRequested => {
