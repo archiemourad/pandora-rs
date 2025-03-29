@@ -72,7 +72,7 @@ impl<'window> Window<'window> {
         }
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, clear_color: Option<wgpu::Color>) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
 
         let view = output
@@ -91,12 +91,7 @@ impl<'window> Window<'window> {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
+                        load: wgpu::LoadOp::Clear(clear_color.unwrap_or(wgpu::Color::TRANSPARENT)),
                         store: wgpu::StoreOp::Store,
                     },
                 })],

@@ -9,5 +9,5 @@ fn main() {
     app.create_window("Simple Window 2", 800, 600)
         .expect("Failed to create window 2");
 
-    app.run(ControlFlow::Poll).expect("Failed to run app");
+    app.run(ControlFlow::Poll, None).expect("Failed to run app");
 }

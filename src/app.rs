@@ -50,7 +50,11 @@ impl<'window> App<'window> {
         Ok(window_id)
     }
 
-    pub fn run(mut self, control_flow: ControlFlow) -> Result<(), EventLoopError> {
+    pub fn run(
+        mut self,
+        control_flow: ControlFlow,
+        clear_color: Option<wgpu::Color>,
+    ) -> Result<(), EventLoopError> {
         self.event_loop.set_control_flow(control_flow);
 
         self.event_loop.run(move |event, elwt| match event {
@@ -71,7 +75,7 @@ impl<'window> App<'window> {
                     if let Some(window) = self.windows.get_mut(&window_id) {
                         window.window().request_redraw();
 
-                        match window.render() {
+                        match window.render(clear_color) {
                             Ok(_) => {}
 
                             Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
