@@ -57,6 +57,10 @@ impl<'window> Window<'window> {
         &self.window
     }
 
+    pub fn get_surface_capabilities(&self) -> wgpu::SurfaceCapabilities {
+        self.surface.get_capabilities(&self.context.adapter)
+    }
+
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
