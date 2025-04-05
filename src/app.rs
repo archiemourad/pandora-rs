@@ -50,6 +50,10 @@ impl<'window> App<'window> {
         Ok(window_id)
     }
 
+    pub fn window_mut(&mut self, id: WindowId) -> Option<&mut Window<'window>> {
+        self.windows.get_mut(&id)
+    }
+
     pub fn run(
         mut self,
         control_flow: ControlFlow,
