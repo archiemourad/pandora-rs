@@ -13,19 +13,31 @@ use winit::{
 };
 
 pub struct App<'window> {
-    pub event_loop: EventLoop<()>,
-    pub windows: HashMap<WindowId, Window<'window>>,
     pub context: Arc<WGPUContext>,
+    event_loop: EventLoop<()>,
+    windows: HashMap<WindowId, Window<'window>>,
 }
 
 impl<'window> App<'window> {
+    pub fn event_loop(&self) -> &EventLoop<()> {
+        &self.event_loop
+    }
+
+    pub fn windows(&self) -> &HashMap<WindowId, Window<'window>> {
+        &self.windows
+    }
+
+    pub fn window_mut(&mut self, id: WindowId) -> Option<&mut Window<'window>> {
+        self.windows.get_mut(&id)
+    }
+
     pub fn new(config: WGPUContextConfiguration) -> Result<Self, AppError> {
         let event_loop = EventLoop::new()?;
 
         Ok(Self {
+            context: Arc::new(WGPUContext::new(config)?),
             event_loop,
             windows: HashMap::new(),
-            context: Arc::new(WGPUContext::new(config)?),
         })
     }
 
@@ -48,10 +60,6 @@ impl<'window> App<'window> {
         );
 
         Ok(window_id)
-    }
-
-    pub fn window_mut(&mut self, id: WindowId) -> Option<&mut Window<'window>> {
-        self.windows.get_mut(&id)
     }
 
     pub fn run(
@@ -83,7 +91,7 @@ impl<'window> App<'window> {
                             Ok(_) => {}
 
                             Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                                window.resize(window.size)
+                                window.resize(window.size())
                             }
                             Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
                             Err(wgpu::SurfaceError::Timeout) => todo!(),

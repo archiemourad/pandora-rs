@@ -3,29 +3,63 @@ use std::{iter::once, sync::Arc};
 use winit::dpi::PhysicalSize;
 
 pub struct Window<'window> {
-    pub pipeline: Option<Arc<wgpu::RenderPipeline>>,
-    pub surface: wgpu::Surface<'window>,
-    pub config: wgpu::SurfaceConfiguration,
-    pub size: PhysicalSize<u32>,
-
     context: Arc<WGPUContext>,
+    pipeline: Option<Arc<wgpu::RenderPipeline>>,
+    surface: wgpu::Surface<'window>,
     window: Arc<winit::window::Window>,
+    config: wgpu::SurfaceConfiguration,
+    size: PhysicalSize<u32>,
 }
 
 impl<'window> Window<'window> {
+    pub fn set_pipeline(&mut self, pipeline: Arc<wgpu::RenderPipeline>) {
+        self.pipeline = Some(pipeline);
+    }
+
+    pub fn surface(&self) -> &wgpu::Surface<'window> {
+        &self.surface
+    }
+
+    pub fn get_surface_capabilities(&self) -> wgpu::SurfaceCapabilities {
+        self.surface.get_capabilities(&self.context.adapter())
+    }
+
+    pub fn window(&self) -> &winit::window::Window {
+        &self.window
+    }
+
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
+    }
+
+    pub fn size(&self) -> PhysicalSize<u32> {
+        self.size
+    }
+
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.size = new_size;
+
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+
+            self.surface.configure(&self.context.device(), &self.config);
+        }
+    }
+
     pub fn new(
         context: Arc<WGPUContext>,
         window: Arc<winit::window::Window>,
     ) -> Result<Self, WindowError> {
         let size = window.inner_size();
 
-        let surface = context.instance.create_surface(window.clone())?;
+        let surface = context.instance().create_surface(window.clone())?;
 
-        if !context.adapter.is_surface_supported(&surface) {
+        if !context.adapter().is_surface_supported(&surface) {
             return Err(WindowError::SurfaceNotSupported);
         }
 
-        let capabilities = surface.get_capabilities(&context.adapter);
+        let capabilities = surface.get_capabilities(&context.adapter());
 
         let format = capabilities
             .formats
@@ -46,17 +80,13 @@ impl<'window> Window<'window> {
         };
 
         Ok(Self {
+            context,
             pipeline: None,
             surface,
+            window,
             config,
             size,
-            context,
-            window,
         })
-    }
-
-    pub fn set_pipeline(&mut self, pipeline: Arc<wgpu::RenderPipeline>) {
-        self.pipeline = Some(pipeline);
     }
 
     pub fn create_pipeline(
@@ -65,20 +95,20 @@ impl<'window> Window<'window> {
         vs_entry: &str,
         fs_entry: &str,
     ) -> wgpu::RenderPipeline {
-        let shader = self.context.device.create_shader_module(shader);
+        let shader = self.context.device().create_shader_module(shader);
 
-        let layout = self
-            .context
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: None,
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
+        let layout =
+            self.context
+                .device()
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: None,
+                    bind_group_layouts: &[],
+                    push_constant_ranges: &[],
+                });
 
         let pipeline =
             self.context
-                .device
+                .device()
                 .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                     label: None,
                     layout: Some(&layout),
@@ -120,25 +150,6 @@ impl<'window> Window<'window> {
         pipeline
     }
 
-    pub fn window(&self) -> &winit::window::Window {
-        &self.window
-    }
-
-    pub fn get_surface_capabilities(&self) -> wgpu::SurfaceCapabilities {
-        self.surface.get_capabilities(&self.context.adapter)
-    }
-
-    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
-        if new_size.width > 0 && new_size.height > 0 {
-            self.size = new_size;
-
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
-
-            self.surface.configure(&self.context.device, &self.config);
-        }
-    }
-
     pub fn render(&mut self, clear_color: Option<wgpu::Color>) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
 
@@ -148,7 +159,7 @@ impl<'window> Window<'window> {
 
         let mut encoder = self
             .context
-            .device
+            .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
         {
@@ -173,7 +184,7 @@ impl<'window> Window<'window> {
             }
         }
 
-        self.context.queue.submit(once(encoder.finish()));
+        self.context.queue().submit(once(encoder.finish()));
         output.present();
 
         Ok(())

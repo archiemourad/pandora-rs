@@ -43,13 +43,29 @@ impl<'a, 'b> WGPUContextConfiguration<'a, 'b> {
 }
 
 pub struct WGPUContext {
-    pub instance: wgpu::Instance,
-    pub adapter: wgpu::Adapter,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
 }
 
 impl WGPUContext {
+    pub fn instance(&self) -> &wgpu::Instance {
+        &self.instance
+    }
+
+    pub fn adapter(&self) -> &wgpu::Adapter {
+        &self.adapter
+    }
+
+    pub fn device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
     pub fn new(config: WGPUContextConfiguration) -> Result<Self, WGPUContextError> {
         let instance = wgpu::Instance::new(config.instance);
 
