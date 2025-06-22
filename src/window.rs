@@ -28,6 +28,10 @@ impl<'window> Window<'window> {
         &self.window
     }
 
+    pub fn title(&self) -> String {
+        self.window.title()
+    }
+
     pub fn config(&self) -> &wgpu::SurfaceConfiguration {
         &self.config
     }

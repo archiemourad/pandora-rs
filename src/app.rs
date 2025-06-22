@@ -3,6 +3,7 @@ use crate::{
     error::{AppError, CreateWindowError},
     window::Window,
 };
+use log::{debug, error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 use winit::{
     dpi::PhysicalSize,
@@ -32,11 +33,11 @@ impl<'window> App<'window> {
     }
 
     pub fn new(config: WGPUContextConfiguration) -> Result<Self, AppError> {
-        let event_loop = EventLoop::new()?;
+        info!("Initializing app...");
 
         Ok(Self {
             context: Arc::new(WGPUContext::new(config)?),
-            event_loop,
+            event_loop: EventLoop::new()?,
             windows: HashMap::new(),
         })
     }
@@ -59,6 +60,17 @@ impl<'window> App<'window> {
             Window::new(self.context.clone(), Arc::new(window))?,
         );
 
+        info!(
+            "Created window: '{}' (id: {}, size: {}x{})",
+            title,
+            format!("{:?}", window_id)
+                .chars()
+                .filter(|c| c.is_ascii_digit())
+                .collect::<String>(),
+            width,
+            height
+        );
+
         Ok(window_id)
     }
 
@@ -69,18 +81,44 @@ impl<'window> App<'window> {
     ) -> Result<(), EventLoopError> {
         self.event_loop.set_control_flow(control_flow);
 
+        info!("Starting event loop...");
+
         self.event_loop.run(move |event, elwt| match event {
             Event::WindowEvent { event, window_id } => match event {
                 WindowEvent::CloseRequested => {
+                    info!(
+                        "Request to close window: {} (id: {})",
+                        self.windows
+                            .get(&window_id)
+                            .map_or("Unknown".to_string(), |w| format!("'{}'", w.title())),
+                        format!("{:?}", window_id)
+                            .chars()
+                            .filter(|c| c.is_ascii_digit())
+                            .collect::<String>()
+                    );
+
                     self.windows.remove(&window_id);
 
                     if self.windows.is_empty() {
+                        info!("No more windows open, exiting event loop...");
+
                         elwt.exit();
                     }
                 }
                 WindowEvent::Resized(new_size) => {
                     if let Some(window) = self.windows.get_mut(&window_id) {
                         window.resize(new_size);
+
+                        debug!(
+                            "Window resized: '{}' (id: {}) to: {}x{}",
+                            window.title(),
+                            format!("{:?}", window_id)
+                                .chars()
+                                .filter(|c| c.is_ascii_digit())
+                                .collect::<String>(),
+                            new_size.width,
+                            new_size.height
+                        );
                     }
                 }
                 WindowEvent::RedrawRequested => {
@@ -91,10 +129,37 @@ impl<'window> App<'window> {
                             Ok(_) => {}
 
                             Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                                window.resize(window.size())
+                                warn!(
+                                    "Surface lost or outdated for window: '{}' (id: {}), resizing...",
+                                    window.title(),
+                                    format!("{:?}", window_id)
+                                .chars()
+                                .filter(|c| c.is_ascii_digit())
+                                .collect::<String>()
+                                );
+
+                                window.resize(window.size());
                             }
-                            Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
-                            Err(wgpu::SurfaceError::Timeout) => todo!(),
+                            Err(wgpu::SurfaceError::OutOfMemory) => {
+                                error!(
+                                    "Out of memory error during render for window: '{}' (id: {}), exiting...",
+                                    window.title(),
+                                    format!("{:?}", window_id)
+                                .chars()
+                                .filter(|c| c.is_ascii_digit())
+                                .collect::<String>()
+                                );
+
+                                elwt.exit();
+                            }
+                            Err(wgpu::SurfaceError::Timeout) => warn!(
+                                "Render timeout for window: '{}' (id: {})",
+                                window.title(),
+                                format!("{:?}", window_id)
+                                .chars()
+                                .filter(|c| c.is_ascii_digit())
+                                .collect::<String>()
+                                )
                         }
                     }
                 }

@@ -3,6 +3,8 @@ use std::sync::Arc;
 use winit::event_loop::ControlFlow;
 
 fn main() {
+    env_logger::init();
+
     let mut app = App::new(WGPUContextConfiguration::default()).expect("Failed to create app");
 
     let pipeline = Arc::new(

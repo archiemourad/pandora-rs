@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+env_logger = "0.11.8"
+log = "0.4.27"
 pollster = "0.3.0"
 thiserror = "1.0.64"
 wgpu = "22.1.0"
