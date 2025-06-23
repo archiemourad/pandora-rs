@@ -1,10 +1,10 @@
-use crate::{context::WGPUContext, error::WindowError};
+use crate::{context::WGPUContext, error::WindowError, renderable::Renderable};
 use std::{iter::once, sync::Arc};
 use winit::dpi::PhysicalSize;
 
 pub struct Window<'window> {
     context: Arc<WGPUContext>,
-    pipeline: Option<Arc<wgpu::RenderPipeline>>,
+    renderables: Vec<Arc<Renderable>>,
     surface: wgpu::Surface<'window>,
     window: Arc<winit::window::Window>,
     config: wgpu::SurfaceConfiguration,
@@ -12,8 +12,8 @@ pub struct Window<'window> {
 }
 
 impl<'window> Window<'window> {
-    pub fn set_pipeline(&mut self, pipeline: Arc<wgpu::RenderPipeline>) {
-        self.pipeline = Some(pipeline);
+    pub fn add_renderable(&mut self, renderable: Arc<Renderable>) {
+        self.renderables.push(renderable);
     }
 
     pub fn surface(&self) -> &wgpu::Surface<'window> {
@@ -85,7 +85,7 @@ impl<'window> Window<'window> {
 
         Ok(Self {
             context,
-            pipeline: None,
+            renderables: Vec::new(),
             surface,
             window,
             config,
@@ -121,9 +121,8 @@ impl<'window> Window<'window> {
                 timestamp_writes: None,
             });
 
-            if let Some(pipeline) = &self.pipeline {
-                _pass.set_pipeline(pipeline);
-                _pass.draw(0..3, 0..1);
+            for renderable in &self.renderables {
+                renderable.draw(&mut _pass);
             }
         }
 
