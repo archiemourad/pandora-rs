@@ -1,5 +1,6 @@
-use pandora::{app::App, context::WGPUContextConfiguration};
 use winit::event_loop::ControlFlow;
+
+use pandora::{app::App, context::WGPUContextConfiguration};
 
 fn main() {
     env_logger::init();

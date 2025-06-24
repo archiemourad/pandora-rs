@@ -1,8 +1,3 @@
-use crate::{
-    context::{WGPUContext, WGPUContextConfiguration},
-    error::{AppError, CreateWindowError},
-    window::Window,
-};
 use log::{debug, error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 use winit::{
@@ -11,6 +6,12 @@ use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, WindowId},
+};
+
+use crate::{
+    context::{WGPUContext, WGPUContextConfiguration},
+    error::{AppError, CreateWindowError},
+    window::Window,
 };
 
 pub struct App<'window> {

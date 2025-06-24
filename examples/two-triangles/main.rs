@@ -1,31 +1,13 @@
-use pandora::{
-    app::App, context::WGPUContextConfiguration, mesh::Mesh, pipeline::PipelineBuilder,
-    renderable::Renderable, vertex::Vertex as VertexLayout,
-};
-use std::{mem, sync::Arc};
+use std::sync::Arc;
 use winit::event_loop::ControlFlow;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
-    position: [f32; 3],
-    color: [f32; 3],
-}
+use pandora::{
+    app::App, context::WGPUContextConfiguration, drawable::Drawable, mesh::Mesh,
+    pipeline::PipelineBuilder, vertex::VertexLayout,
+};
 
-impl Vertex {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
-}
-
-impl VertexLayout for Vertex {
-    fn layout<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
-            array_stride: mem::size_of::<Self>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &Self::ATTRIBUTES,
-        }
-    }
-}
+mod vertex;
+use vertex::Vertex;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
@@ -66,23 +48,22 @@ fn main() {
         .create_window("Triangle Window 2", 800, 600)
         .expect("Failed to create window 2");
 
-    let triangle_renderable = Arc::new(Renderable::new(
-        Arc::new(Mesh::new(
-            app.context.device(),
-            VERTICES,
-            None,
-            wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        )),
-        pipeline,
+    let triangle_mesh = Arc::new(Mesh::new(
+        app.context.device(),
+        VERTICES,
+        None,
+        wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
     ));
+
+    let triangle = Arc::new(Drawable::new(triangle_mesh, pipeline));
 
     app.window_mut(window1_id)
         .expect("Failed to get window 1")
-        .add_renderable(triangle_renderable.clone());
+        .add_drawable(triangle.clone());
 
     app.window_mut(window2_id)
         .expect("Failed to get window 2")
-        .add_renderable(triangle_renderable);
+        .add_drawable(triangle);
 
     app.run(ControlFlow::Poll, None).expect("Failed to run app");
 }

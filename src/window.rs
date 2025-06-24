@@ -1,10 +1,11 @@
-use crate::{context::WGPUContext, error::WindowError, renderable::Renderable};
 use std::{iter::once, sync::Arc};
 use winit::dpi::PhysicalSize;
 
+use crate::{context::WGPUContext, drawable::Drawable, error::WindowError};
+
 pub struct Window<'window> {
     context: Arc<WGPUContext>,
-    renderables: Vec<Arc<Renderable>>,
+    drawables: Vec<Arc<Drawable>>,
     surface: wgpu::Surface<'window>,
     window: Arc<winit::window::Window>,
     config: wgpu::SurfaceConfiguration,
@@ -12,8 +13,16 @@ pub struct Window<'window> {
 }
 
 impl<'window> Window<'window> {
-    pub fn add_renderable(&mut self, renderable: Arc<Renderable>) {
-        self.renderables.push(renderable);
+    pub fn drawables(&self) -> &[Arc<Drawable>] {
+        &self.drawables
+    }
+
+    pub fn add_drawable(&mut self, drawable: Arc<Drawable>) {
+        self.drawables.push(drawable);
+    }
+
+    pub fn set_drawables(&mut self, drawables: Vec<Arc<Drawable>>) {
+        self.drawables = drawables;
     }
 
     pub fn surface(&self) -> &wgpu::Surface<'window> {
@@ -85,7 +94,7 @@ impl<'window> Window<'window> {
 
         Ok(Self {
             context,
-            renderables: Vec::new(),
+            drawables: Vec::new(),
             surface,
             window,
             config,
@@ -121,8 +130,8 @@ impl<'window> Window<'window> {
                 timestamp_writes: None,
             });
 
-            for renderable in &self.renderables {
-                renderable.draw(&mut _pass);
+            for drawable in &self.drawables {
+                drawable.draw(&mut _pass);
             }
         }
 
