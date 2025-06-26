@@ -2,22 +2,66 @@ use std::num::NonZeroU32;
 
 pub struct PipelineBuilder<'a> {
     device: &'a wgpu::Device,
-    shader: wgpu::ShaderModuleDescriptor<'a>,
+    shader_descriptor: wgpu::ShaderModuleDescriptor<'a>,
     vs_entry: &'a str,
     fs_entry: &'a str,
-    format: wgpu::TextureFormat,
-    layout: Option<wgpu::PipelineLayoutDescriptor<'a>>,
+    layout_descriptor: wgpu::PipelineLayoutDescriptor<'a>,
     vertex_buffers: Vec<wgpu::VertexBufferLayout<'a>>,
-    color_targets: Option<Vec<Option<wgpu::ColorTargetState>>>,
-    primitive: Option<wgpu::PrimitiveState>,
+    color_targets: Vec<Option<wgpu::ColorTargetState>>,
+    primitive: wgpu::PrimitiveState,
     depth_stencil: Option<wgpu::DepthStencilState>,
-    multisample: Option<wgpu::MultisampleState>,
+    multisample: wgpu::MultisampleState,
     multiview: Option<NonZeroU32>,
 }
 
 impl<'a> PipelineBuilder<'a> {
-    pub fn with_layout(mut self, layout: wgpu::PipelineLayoutDescriptor<'a>) -> Self {
-        self.layout = Some(layout);
+    pub fn new(
+        device: &'a wgpu::Device,
+        shader_descriptor: wgpu::ShaderModuleDescriptor<'a>,
+        vs_entry: &'a str,
+        fs_entry: &'a str,
+        format: wgpu::TextureFormat,
+    ) -> Self {
+        Self {
+            device,
+            shader_descriptor,
+            vs_entry,
+            fs_entry,
+            layout_descriptor: wgpu::PipelineLayoutDescriptor {
+                label: None,
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            },
+            vertex_buffers: Vec::new(),
+            color_targets: vec![Some(wgpu::ColorTargetState {
+                format,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: wgpu::PolygonMode::Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        }
+    }
+
+    pub fn with_layout_descriptor(
+        mut self,
+        layout_descriptor: wgpu::PipelineLayoutDescriptor<'a>,
+    ) -> Self {
+        self.layout_descriptor = layout_descriptor;
         self
     }
 
@@ -33,68 +77,36 @@ impl<'a> PipelineBuilder<'a> {
         mut self,
         color_targets: Vec<Option<wgpu::ColorTargetState>>,
     ) -> Self {
-        self.color_targets = Some(color_targets);
+        self.color_targets = color_targets;
         self
     }
 
     pub fn with_primitive(mut self, primitive: wgpu::PrimitiveState) -> Self {
-        self.primitive = Some(primitive);
+        self.primitive = primitive;
         self
     }
 
-    pub fn with_depth_stencil(mut self, depth_stencil: wgpu::DepthStencilState) -> Self {
-        self.depth_stencil = Some(depth_stencil);
+    pub fn with_depth_stencil(mut self, depth_stencil: Option<wgpu::DepthStencilState>) -> Self {
+        self.depth_stencil = depth_stencil;
         self
     }
 
     pub fn with_multisample(mut self, multisample: wgpu::MultisampleState) -> Self {
-        self.multisample = Some(multisample);
+        self.multisample = multisample;
         self
     }
 
-    pub fn with_multiview(mut self, multiview: NonZeroU32) -> Self {
-        self.multiview = Some(multiview);
+    pub fn with_multiview(mut self, multiview: Option<NonZeroU32>) -> Self {
+        self.multiview = multiview;
         self
-    }
-
-    pub fn new(
-        device: &'a wgpu::Device,
-        shader: wgpu::ShaderModuleDescriptor<'a>,
-        vs_entry: &'a str,
-        fs_entry: &'a str,
-        format: wgpu::TextureFormat,
-    ) -> Self {
-        Self {
-            device,
-            shader,
-            vs_entry,
-            fs_entry,
-            format,
-            layout: None,
-            vertex_buffers: Vec::new(),
-            color_targets: None,
-            primitive: None,
-            depth_stencil: None,
-            multisample: None,
-            multiview: None,
-        }
     }
 
     pub fn build(self) -> wgpu::RenderPipeline {
-        let shader = self.device.create_shader_module(self.shader);
+        let shader = self.device.create_shader_module(self.shader_descriptor);
 
-        let layout = self
-            .device
-            .create_pipeline_layout(&self.layout.unwrap_or_else(|| {
-                wgpu::PipelineLayoutDescriptor {
-                    label: None,
-                    bind_group_layouts: &[],
-                    push_constant_ranges: &[],
-                }
-            }));
+        let layout = self.device.create_pipeline_layout(&self.layout_descriptor);
 
-        let pipeline = self
-            .device
+        self.device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: None,
                 layout: Some(&layout),
@@ -107,34 +119,14 @@ impl<'a> PipelineBuilder<'a> {
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
                     entry_point: self.fs_entry,
-                    targets: &self.color_targets.unwrap_or_else(|| {
-                        vec![Some(wgpu::ColorTargetState {
-                            format: self.format,
-                            blend: Some(wgpu::BlendState::REPLACE),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })]
-                    }),
+                    targets: &self.color_targets,
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                 }),
-                primitive: self.primitive.unwrap_or_else(|| wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    unclipped_depth: false,
-                    conservative: false,
-                }),
+                primitive: self.primitive,
                 depth_stencil: self.depth_stencil,
-                multisample: self.multisample.unwrap_or_else(|| wgpu::MultisampleState {
-                    count: 1,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false,
-                }),
+                multisample: self.multisample,
                 multiview: self.multiview,
                 cache: None,
-            });
-
-        pipeline
+            })
     }
 }
