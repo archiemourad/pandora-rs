@@ -1,11 +1,11 @@
 use winit::event_loop::ControlFlow;
 
-use pandora::{app::App, context::WGPUContextConfiguration};
+use pandora::{app::App, context::WGPUContextBuilder};
 
 fn main() {
     env_logger::init();
 
-    let mut app = App::new(WGPUContextConfiguration::default()).expect("Failed to create app");
+    let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
 
     app.create_window("Simple Window 1", 800, 600)
         .expect("Failed to create window 1");

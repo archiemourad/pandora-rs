@@ -9,7 +9,7 @@ use winit::{
 };
 
 use crate::{
-    context::{WGPUContext, WGPUContextConfiguration},
+    context::{WGPUContext, WGPUContextBuilder},
     error::{AppError, CreateWindowError},
     window::Window,
 };
@@ -33,11 +33,11 @@ impl<'window> App<'window> {
         self.windows.get_mut(&id)
     }
 
-    pub fn new(config: WGPUContextConfiguration) -> Result<Self, AppError> {
+    pub fn new(builder: WGPUContextBuilder) -> Result<Self, AppError> {
         info!("Initializing app...");
 
         Ok(Self {
-            context: Arc::new(WGPUContext::new(config)?),
+            context: Arc::new(builder.build()?),
             event_loop: EventLoop::new()?,
             windows: HashMap::new(),
         })

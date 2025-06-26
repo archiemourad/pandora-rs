@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::event_loop::ControlFlow;
 
 use pandora::{
-    app::App, context::WGPUContextConfiguration, drawable::Drawable, mesh::Mesh,
+    app::App, context::WGPUContextBuilder, drawable::Drawable, mesh::Mesh,
     pipeline::PipelineBuilder, vertex::VertexLayout,
 };
 
@@ -27,7 +27,7 @@ const VERTICES: &[Vertex] = &[
 fn main() {
     env_logger::init();
 
-    let mut app = App::new(WGPUContextConfiguration::default()).expect("Failed to create app");
+    let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
 
     let pipeline = Arc::new(
         PipelineBuilder::new(
