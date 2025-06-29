@@ -2,12 +2,16 @@ use std::sync::Arc;
 
 use crate::mesh::Mesh;
 
-pub struct Drawable {
+pub trait Drawable {
+    fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>);
+}
+
+pub struct Renderable {
     mesh: Arc<Mesh>,
     pipeline: Arc<wgpu::RenderPipeline>,
 }
 
-impl Drawable {
+impl Renderable {
     pub fn mesh(&self) -> &Arc<Mesh> {
         &self.mesh
     }
@@ -19,8 +23,10 @@ impl Drawable {
     pub fn new(mesh: Arc<Mesh>, pipeline: Arc<wgpu::RenderPipeline>) -> Self {
         Self { mesh, pipeline }
     }
+}
 
-    pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+impl Drawable for Renderable {
+    fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_vertex_buffer(0, self.mesh.vertex_buffer().slice(..));
 

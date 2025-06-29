@@ -5,24 +5,20 @@ use crate::{context::WGPUContext, drawable::Drawable, error::WindowError};
 
 pub struct Window<'window> {
     context: Arc<WGPUContext>,
-    drawables: Vec<Arc<Drawable>>,
-    surface: wgpu::Surface<'window>,
     window: Arc<winit::window::Window>,
-    config: wgpu::SurfaceConfiguration,
+    surface: wgpu::Surface<'window>,
+    surface_config: wgpu::SurfaceConfiguration,
     size: PhysicalSize<u32>,
+    drawables: Vec<Arc<dyn Drawable>>,
 }
 
 impl<'window> Window<'window> {
-    pub fn drawables(&self) -> &[Arc<Drawable>] {
-        &self.drawables
+    pub fn window(&self) -> &winit::window::Window {
+        &self.window
     }
 
-    pub fn add_drawable(&mut self, drawable: Arc<Drawable>) {
-        self.drawables.push(drawable);
-    }
-
-    pub fn set_drawables(&mut self, drawables: Vec<Arc<Drawable>>) {
-        self.drawables = drawables;
+    pub fn title(&self) -> String {
+        self.window.title()
     }
 
     pub fn surface(&self) -> &wgpu::Surface<'window> {
@@ -33,30 +29,31 @@ impl<'window> Window<'window> {
         self.surface.get_capabilities(&self.context.adapter())
     }
 
-    pub fn window(&self) -> &winit::window::Window {
-        &self.window
-    }
-
-    pub fn title(&self) -> String {
-        self.window.title()
-    }
-
-    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
-        &self.config
+    pub fn surface_config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.surface_config
     }
 
     pub fn size(&self) -> PhysicalSize<u32> {
         self.size
     }
 
+    pub fn drawables(&self) -> &[Arc<dyn Drawable>] {
+        &self.drawables
+    }
+
+    pub fn drawables_mut(&mut self) -> &mut Vec<Arc<dyn Drawable>> {
+        &mut self.drawables
+    }
+
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
 
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
+            self.surface_config.width = new_size.width;
+            self.surface_config.height = new_size.height;
 
-            self.surface.configure(&self.context.device(), &self.config);
+            self.surface
+                .configure(&self.context.device(), &self.surface_config);
         }
     }
 
@@ -81,7 +78,7 @@ impl<'window> Window<'window> {
             .copied()
             .unwrap_or(capabilities.formats[0]);
 
-        let config = wgpu::SurfaceConfiguration {
+        let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: size.width,
@@ -94,11 +91,11 @@ impl<'window> Window<'window> {
 
         Ok(Self {
             context,
-            drawables: Vec::new(),
-            surface,
             window,
-            config,
+            surface,
+            surface_config,
             size,
+            drawables: Vec::new(),
         })
     }
 
