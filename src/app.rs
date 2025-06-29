@@ -1,7 +1,6 @@
 use log::{debug, error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 use winit::{
-    dpi::PhysicalSize,
     error::EventLoopError,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -43,18 +42,13 @@ impl<'window> App<'window> {
         })
     }
 
-    pub fn create_window(
-        &mut self,
-        title: &str,
-        width: u32,
-        height: u32,
-    ) -> Result<WindowId, CreateWindowError> {
-        let window = WindowBuilder::new()
-            .with_title(title)
-            .with_inner_size(PhysicalSize::new(width, height))
-            .build(&self.event_loop)?;
+    pub fn add_window(&mut self, builder: WindowBuilder) -> Result<WindowId, CreateWindowError> {
+        let window = builder.build(&self.event_loop)?;
 
         let window_id = window.id();
+
+        let title = window.title();
+        let size = window.inner_size();
 
         self.windows.insert(
             window_id,
@@ -68,8 +62,8 @@ impl<'window> App<'window> {
                 .chars()
                 .filter(|c| c.is_ascii_digit())
                 .collect::<String>(),
-            width,
-            height
+            size.width,
+            size.height
         );
 
         Ok(window_id)

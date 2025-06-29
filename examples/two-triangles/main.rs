@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use winit::event_loop::ControlFlow;
+use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
     app::App, context::WGPUContextBuilder, drawable::Drawable, mesh::Mesh,
@@ -42,11 +42,19 @@ fn main() {
     );
 
     let window1_id = app
-        .create_window("Triangle Window 1", 800, 600)
-        .expect("Failed to create window 1");
+        .add_window(
+            WindowBuilder::new()
+                .with_title("Triangle Window 1")
+                .with_inner_size(PhysicalSize::new(800, 600)),
+        )
+        .expect("Failed to add window 1");
     let window2_id = app
-        .create_window("Triangle Window 2", 800, 600)
-        .expect("Failed to create window 2");
+        .add_window(
+            WindowBuilder::new()
+                .with_title("Triangle Window 2")
+                .with_inner_size(PhysicalSize::new(800, 600)),
+        )
+        .expect("Failed to add window 2");
 
     let triangle_mesh = Arc::new(Mesh::new(
         app.context.device(),
