@@ -21,8 +21,7 @@ pub struct Window<'window> {
     context: Arc<WGPUContext>,
     window: Arc<winit::window::Window>,
     surface: wgpu::Surface<'window>,
-    surface_config: wgpu::SurfaceConfiguration,
-    size: PhysicalSize<u32>,
+    config: wgpu::SurfaceConfiguration,
     drawables: Vec<Arc<dyn Drawable>>,
 }
 
@@ -43,12 +42,12 @@ impl<'window> Window<'window> {
         self.surface.get_capabilities(&self.context.adapter())
     }
 
-    pub fn surface_config(&self) -> &wgpu::SurfaceConfiguration {
-        &self.surface_config
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
     }
 
     pub fn size(&self) -> PhysicalSize<u32> {
-        self.size
+        self.window.inner_size()
     }
 
     pub fn drawables(&self) -> &[Arc<dyn Drawable>] {
@@ -61,13 +60,10 @@ impl<'window> Window<'window> {
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.size = new_size;
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
 
-            self.surface_config.width = new_size.width;
-            self.surface_config.height = new_size.height;
-
-            self.surface
-                .configure(&self.context.device(), &self.surface_config);
+            self.surface.configure(&self.context.device(), &self.config);
         }
     }
 
@@ -92,7 +88,7 @@ impl<'window> Window<'window> {
             .copied()
             .unwrap_or(capabilities.formats[0]);
 
-        let surface_config = wgpu::SurfaceConfiguration {
+        let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format,
             width: size.width,
@@ -107,8 +103,7 @@ impl<'window> Window<'window> {
             context,
             window,
             surface,
-            surface_config,
-            size,
+            config,
             drawables: Vec::new(),
         })
     }
