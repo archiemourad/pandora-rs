@@ -3,6 +3,20 @@ use winit::dpi::PhysicalSize;
 
 use crate::{context::WGPUContext, drawable::Drawable, error::WindowError};
 
+pub struct Frame<'a> {
+    pub context: &'a WGPUContext,
+    pub surface_texture: wgpu::SurfaceTexture,
+    pub view: wgpu::TextureView,
+    pub encoder: wgpu::CommandEncoder,
+}
+
+impl<'a> Frame<'a> {
+    pub fn present(self) {
+        self.context.queue().submit(once(self.encoder.finish()));
+        self.surface_texture.present();
+    }
+}
+
 pub struct Window<'window> {
     context: Arc<WGPUContext>,
     window: Arc<winit::window::Window>,
@@ -99,42 +113,23 @@ impl<'window> Window<'window> {
         })
     }
 
-    pub fn render(&mut self, clear_color: Option<wgpu::Color>) -> Result<(), wgpu::SurfaceError> {
-        let output = self.surface.get_current_texture()?;
+    pub fn frame(&self) -> Result<Frame, wgpu::SurfaceError> {
+        let surface_texture = self.surface.get_current_texture()?;
 
-        let view = output
+        let view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self
+        let encoder = self
             .context
             .device()
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
-        {
-            let mut _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: None,
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(clear_color.unwrap_or(wgpu::Color::TRANSPARENT)),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
-
-            for drawable in &self.drawables {
-                drawable.draw(&mut _pass);
-            }
-        }
-
-        self.context.queue().submit(once(encoder.finish()));
-        output.present();
-
-        Ok(())
+        Ok(Frame {
+            context: &self.context,
+            surface_texture,
+            view,
+            encoder,
+        })
     }
 }

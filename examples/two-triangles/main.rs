@@ -75,5 +75,38 @@ fn main() {
         .drawables_mut()
         .push(triangle);
 
-    app.run(ControlFlow::Poll, None).expect("Failed to run app");
+    app.run_with(ControlFlow::Poll, |windows, window_id| {
+        if let Some(window) = windows.get_mut(&window_id) {
+            let mut frame = window.frame()?;
+
+            {
+                let mut render_pass =
+                    frame
+                        .encoder
+                        .begin_render_pass(&wgpu::RenderPassDescriptor {
+                            label: None,
+                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                                view: &frame.view,
+                                resolve_target: None,
+                                ops: wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                    store: wgpu::StoreOp::Store,
+                                },
+                            })],
+                            depth_stencil_attachment: None,
+                            occlusion_query_set: None,
+                            timestamp_writes: None,
+                        });
+
+                for drawable in window.drawables() {
+                    drawable.draw(&mut render_pass);
+                }
+            }
+
+            frame.present();
+        }
+
+        Ok(())
+    })
+    .expect("Failed to run app");
 }

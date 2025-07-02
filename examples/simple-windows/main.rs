@@ -20,5 +20,6 @@ fn main() {
     )
     .expect("Failed to add window 2");
 
-    app.run(ControlFlow::Poll, None).expect("Failed to run app");
+    app.run(ControlFlow::Poll, wgpu::Color::BLACK)
+        .expect("Failed to run app");
 }
