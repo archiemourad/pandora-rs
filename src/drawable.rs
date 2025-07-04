@@ -6,12 +6,12 @@ pub trait Drawable {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>);
 }
 
-pub struct Renderable {
+pub struct Primitive {
     mesh: Arc<Mesh>,
     pipeline: Arc<wgpu::RenderPipeline>,
 }
 
-impl Renderable {
+impl Primitive {
     pub fn mesh(&self) -> &Arc<Mesh> {
         &self.mesh
     }
@@ -25,7 +25,7 @@ impl Renderable {
     }
 }
 
-impl Drawable for Renderable {
+impl Drawable for Primitive {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_vertex_buffer(0, self.mesh.vertex_buffer().slice(..));

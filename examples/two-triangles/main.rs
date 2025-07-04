@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
-    app::App, context::WGPUContextBuilder, drawable::Renderable, mesh::Mesh,
+    app::App, context::WGPUContextBuilder, drawable::Primitive, mesh::Mesh,
     pipeline::PipelineBuilder, vertex::VertexLayout,
 };
 
@@ -63,7 +63,7 @@ fn main() {
         wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
     ));
 
-    let triangle = Arc::new(Renderable::new(triangle_mesh, pipeline));
+    let triangle = Arc::new(Primitive::new(triangle_mesh, pipeline));
 
     app.window_mut(window1_id)
         .expect("Failed to get window 1")
