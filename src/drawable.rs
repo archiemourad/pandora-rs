@@ -21,7 +21,7 @@ impl Model {
         &self.mesh
     }
 
-    pub fn material(&self) -> &Material {
+    pub fn material(&self) -> &Arc<Material> {
         &self.material
     }
 
