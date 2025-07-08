@@ -13,7 +13,7 @@ pub struct Material {
 
 pub struct Model {
     mesh: Arc<Mesh>,
-    material: Material,
+    material: Arc<Material>,
 }
 
 impl Model {
@@ -25,7 +25,7 @@ impl Model {
         &self.material
     }
 
-    pub fn new(mesh: Arc<Mesh>, material: Material) -> Self {
+    pub fn new(mesh: Arc<Mesh>, material: Arc<Material>) -> Self {
         Self { mesh, material }
     }
 }

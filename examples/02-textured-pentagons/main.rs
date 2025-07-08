@@ -86,13 +86,12 @@ fn main() {
         wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
     ));
 
-    let pentagon = Arc::new(Model::new(
-        pentagon_mesh,
-        Material {
-            pipeline: pipeline.clone(),
-            bind_group: pentagon_texture.bind_group(),
-        },
-    ));
+    let pentagon_material = Arc::new(Material {
+        pipeline: pipeline.clone(),
+        bind_group: pentagon_texture.bind_group(),
+    });
+
+    let pentagon = Arc::new(Model::new(pentagon_mesh, pentagon_material));
 
     app.window_mut(window1_id)
         .expect("Failed to get window 1")
