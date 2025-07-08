@@ -66,9 +66,12 @@ impl<'window> App<'window> {
     pub fn new(builder: WGPUContextBuilder) -> Result<Self, AppError> {
         info!("Initializing app...");
 
+        let context = Arc::new(builder.build()?);
+        let event_loop = EventLoop::new()?;
+
         Ok(Self {
-            context: Arc::new(builder.build()?),
-            event_loop: EventLoop::new()?,
+            context,
+            event_loop,
             windows: HashMap::new(),
         })
     }

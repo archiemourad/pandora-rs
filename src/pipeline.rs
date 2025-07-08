@@ -65,6 +65,14 @@ impl<'a> PipelineBuilder<'a> {
         self
     }
 
+    pub fn with_bind_group_layouts(
+        mut self,
+        bind_group_layouts: &'a [&'a wgpu::BindGroupLayout],
+    ) -> Self {
+        self.layout_descriptor.bind_group_layouts = bind_group_layouts;
+        self
+    }
+
     pub fn with_vertex_buffers(
         mut self,
         vertex_buffers: Vec<wgpu::VertexBufferLayout<'a>>,

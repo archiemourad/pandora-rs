@@ -4,5 +4,6 @@ pub mod drawable;
 pub mod error;
 pub mod mesh;
 pub mod pipeline;
+pub mod texture;
 pub mod vertex;
 pub mod window;

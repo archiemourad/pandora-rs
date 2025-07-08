@@ -2,8 +2,13 @@ use std::sync::Arc;
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
-    app::App, context::WGPUContextBuilder, drawable::Primitive, mesh::Mesh,
-    pipeline::PipelineBuilder, vertex::VertexLayout,
+    app::App,
+    context::WGPUContextBuilder,
+    drawable::{Material, Model},
+    mesh::Mesh,
+    pipeline::PipelineBuilder,
+    texture::Texture,
+    vertex::VertexLayout,
 };
 
 mod vertex;
@@ -11,23 +16,40 @@ use vertex::Vertex;
 
 const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
+        position: [-0.0868241, 0.49240386, 0.0],
+        tex_coords: [0.4131759, 0.00759614],
     },
     Vertex {
-        position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
+        position: [-0.49513406, 0.06958647, 0.0],
+        tex_coords: [0.0048659444, 0.43041354],
     },
     Vertex {
-        position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
+        position: [-0.21918549, -0.44939706, 0.0],
+        tex_coords: [0.28081453, 0.949397],
+    },
+    Vertex {
+        position: [0.35966998, -0.3473291, 0.0],
+        tex_coords: [0.85967, 0.84732914],
+    },
+    Vertex {
+        position: [0.44147372, 0.2347359, 0.0],
+        tex_coords: [0.9414737, 0.2652641],
     },
 ];
+
+const INDICES: &[u32] = &[0, 1, 2, 0, 2, 3, 0, 3, 4];
 
 fn main() {
     env_logger::init();
 
     let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
+
+    let pentagon_texture = Texture::from_bytes(
+        app.context.device(),
+        app.context.queue(),
+        include_bytes!("happy-tree.png"),
+    )
+    .expect("Failed to load texture");
 
     let pipeline = Arc::new(
         PipelineBuilder::new(
@@ -38,42 +60,49 @@ fn main() {
             wgpu::TextureFormat::Bgra8UnormSrgb,
         )
         .with_vertex_buffers(vec![Vertex::layout()])
+        .with_bind_group_layouts(&[&pentagon_texture.bind_group_layout()])
         .build(),
     );
 
     let window1_id = app
         .add_window(
             WindowBuilder::new()
-                .with_title("Triangle Window 1")
+                .with_title("Pentagon Window 1")
                 .with_inner_size(PhysicalSize::new(800, 600)),
         )
         .expect("Failed to add window 1");
     let window2_id = app
         .add_window(
             WindowBuilder::new()
-                .with_title("Triangle Window 2")
+                .with_title("Pentagon Window 2")
                 .with_inner_size(PhysicalSize::new(800, 600)),
         )
         .expect("Failed to add window 2");
 
-    let triangle_mesh = Arc::new(Mesh::new(
+    let pentagon_mesh = Arc::new(Mesh::new(
         app.context.device(),
         VERTICES,
-        None,
-        wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        Some(INDICES),
+        wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
     ));
 
-    let triangle = Arc::new(Primitive::new(triangle_mesh, pipeline));
+    let pentagon = Arc::new(Model::new(
+        pentagon_mesh,
+        Material {
+            pipeline: pipeline.clone(),
+            bind_group: pentagon_texture.bind_group(),
+        },
+    ));
 
     app.window_mut(window1_id)
         .expect("Failed to get window 1")
         .drawables_mut()
-        .push(triangle.clone());
+        .push(pentagon.clone());
 
     app.window_mut(window2_id)
         .expect("Failed to get window 2")
         .drawables_mut()
-        .push(triangle);
+        .push(pentagon);
 
     app.run_with(ControlFlow::Poll, |windows, window_id| {
         if let Some(window) = windows.get_mut(&window_id) {

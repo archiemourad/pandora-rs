@@ -6,28 +6,34 @@ pub trait Drawable {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>);
 }
 
-pub struct Primitive {
-    mesh: Arc<Mesh>,
-    pipeline: Arc<wgpu::RenderPipeline>,
+pub struct Material {
+    pub pipeline: Arc<wgpu::RenderPipeline>,
+    pub bind_group: Arc<wgpu::BindGroup>,
 }
 
-impl Primitive {
+pub struct Model {
+    mesh: Arc<Mesh>,
+    material: Material,
+}
+
+impl Model {
     pub fn mesh(&self) -> &Arc<Mesh> {
         &self.mesh
     }
 
-    pub fn pipeline(&self) -> &Arc<wgpu::RenderPipeline> {
-        &self.pipeline
+    pub fn material(&self) -> &Material {
+        &self.material
     }
 
-    pub fn new(mesh: Arc<Mesh>, pipeline: Arc<wgpu::RenderPipeline>) -> Self {
-        Self { mesh, pipeline }
+    pub fn new(mesh: Arc<Mesh>, material: Material) -> Self {
+        Self { mesh, material }
     }
 }
 
-impl Drawable for Primitive {
+impl Drawable for Model {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-        render_pass.set_pipeline(&self.pipeline);
+        render_pass.set_pipeline(&self.material.pipeline);
+        render_pass.set_bind_group(0, &self.material.bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.mesh.vertex_buffer().slice(..));
 
         if let Some(index_buffer) = &self.mesh.index_buffer() {
