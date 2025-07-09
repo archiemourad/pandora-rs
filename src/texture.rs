@@ -48,12 +48,12 @@ impl Texture {
         &self.sampler
     }
 
-    pub fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+    pub fn bind_group_layout(&self) -> &Arc<wgpu::BindGroupLayout> {
         &self.bind_group_layout
     }
 
-    pub fn bind_group(&self) -> Arc<wgpu::BindGroup> {
-        self.bind_group.clone()
+    pub fn bind_group(&self) -> &Arc<wgpu::BindGroup> {
+        &self.bind_group
     }
 
     pub fn from_image_with_layout(

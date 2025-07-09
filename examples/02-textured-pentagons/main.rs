@@ -2,13 +2,8 @@ use std::sync::Arc;
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
-    app::App,
-    context::WGPUContextBuilder,
-    drawable::{Material, Model},
-    mesh::Mesh,
-    pipeline::PipelineBuilder,
-    texture::Texture,
-    vertex::VertexLayout,
+    app::App, context::WGPUContextBuilder, drawable::RenderObject, material::Material, mesh::Mesh,
+    pipeline::PipelineBuilder, texture::Texture, vertex::VertexLayout,
 };
 
 mod vertex;
@@ -88,10 +83,10 @@ fn main() {
 
     let pentagon_material = Arc::new(Material {
         pipeline: pipeline.clone(),
-        bind_group: pentagon_texture.bind_group(),
+        diffuse_bind_group: pentagon_texture.bind_group().clone(),
     });
 
-    let pentagon = Arc::new(Model::new(pentagon_mesh, pentagon_material));
+    let pentagon = Arc::new(RenderObject::new(pentagon_mesh, pentagon_material));
 
     app.window_mut(window1_id)
         .expect("Failed to get window 1")

@@ -1,22 +1,17 @@
 use std::sync::Arc;
 
-use crate::mesh::Mesh;
+use crate::{material::Material, mesh::Mesh};
 
 pub trait Drawable {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>);
 }
 
-pub struct Material {
-    pub pipeline: Arc<wgpu::RenderPipeline>,
-    pub bind_group: Arc<wgpu::BindGroup>,
-}
-
-pub struct Model {
+pub struct RenderObject {
     mesh: Arc<Mesh>,
     material: Arc<Material>,
 }
 
-impl Model {
+impl RenderObject {
     pub fn mesh(&self) -> &Arc<Mesh> {
         &self.mesh
     }
@@ -30,10 +25,10 @@ impl Model {
     }
 }
 
-impl Drawable for Model {
+impl Drawable for RenderObject {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.material.pipeline);
-        render_pass.set_bind_group(0, &self.material.bind_group, &[]);
+        render_pass.set_bind_group(0, &self.material.diffuse_bind_group, &[]);
         render_pass.set_vertex_buffer(0, self.mesh.vertex_buffer().slice(..));
 
         if let Some(index_buffer) = &self.mesh.index_buffer() {
