@@ -1,4 +1,5 @@
 pub mod app;
+pub mod camera;
 pub mod context;
 pub mod drawable;
 pub mod error;
