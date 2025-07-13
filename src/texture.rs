@@ -10,32 +10,6 @@ pub struct Texture {
 }
 
 impl Texture {
-    fn default_bind_group_layout(device: &wgpu::Device) -> Arc<wgpu::BindGroupLayout> {
-        Arc::new(
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            multisampled: false,
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                        count: None,
-                    },
-                ],
-                label: None,
-            }),
-        )
-    }
-
     pub fn texture(&self) -> &wgpu::Texture {
         &self.texture
     }
@@ -56,11 +30,10 @@ impl Texture {
         &self.bind_group
     }
 
-    pub fn from_image_with_layout(
+    pub fn from_image(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         image: &image::DynamicImage,
-        bind_group_layout: Arc<wgpu::BindGroupLayout>,
     ) -> Self {
         let rgba_image = image.to_rgba8();
 
@@ -111,6 +84,30 @@ impl Texture {
             ..Default::default()
         });
 
+        let bind_group_layout = Arc::new(device.create_bind_group_layout(
+            &wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: None,
+            },
+        ));
+
         let bind_group = Arc::new(device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
             entries: &[
@@ -135,45 +132,13 @@ impl Texture {
         }
     }
 
-    pub fn from_image(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        image: &image::DynamicImage,
-    ) -> Self {
-        Self::from_image_with_layout(
-            device,
-            queue,
-            image,
-            Self::default_bind_group_layout(device),
-        )
-    }
-
-    pub fn from_bytes_with_layout(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        bytes: &[u8],
-        bind_group_layout: Arc<wgpu::BindGroupLayout>,
-    ) -> Result<Self, image::ImageError> {
-        let image = image::load_from_memory(bytes)?;
-
-        Ok(Self::from_image_with_layout(
-            device,
-            queue,
-            &image,
-            bind_group_layout,
-        ))
-    }
-
     pub fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         bytes: &[u8],
     ) -> Result<Self, image::ImageError> {
-        Self::from_bytes_with_layout(
-            device,
-            queue,
-            bytes,
-            Self::default_bind_group_layout(device),
-        )
+        let image = image::load_from_memory(bytes)?;
+
+        Ok(Self::from_image(device, queue, &image))
     }
 }
