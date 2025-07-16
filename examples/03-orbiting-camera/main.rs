@@ -81,14 +81,14 @@ fn main() {
         .add_window(
             WindowBuilder::new()
                 .with_title("Orbit Window 1")
-                .with_inner_size(PhysicalSize::new(800, 600)),
+                .with_inner_size(PhysicalSize::new(width, height)),
         )
         .expect("Failed to add window 1");
     let window2_id = app
         .add_window(
             WindowBuilder::new()
                 .with_title("Orbit Window 2")
-                .with_inner_size(PhysicalSize::new(800, 600)),
+                .with_inner_size(PhysicalSize::new(width, height)),
         )
         .expect("Failed to add window 2");
 
