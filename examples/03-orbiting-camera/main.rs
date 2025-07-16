@@ -1,9 +1,10 @@
+use cgmath::Angle;
 use std::sync::Arc;
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
     app::App,
-    camera::{Camera, CameraBinding},
+    camera::{Camera, GPUCamera, Projection},
     context::WGPUContextBuilder,
     drawable::RenderObject,
     material::Material,
@@ -46,17 +47,12 @@ fn main() {
 
     let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
 
-    let mut camera = Camera {
-        eye: (0.0, 1.0, 2.0).into(),
-        target: (0.0, 0.0, 0.0).into(),
-        up: cgmath::Vector3::unit_y(),
-        aspect: 800.0 / 600.0,
-        fovy: 45.0,
-        znear: 0.1,
-        zfar: 100.0,
-    };
+    let (width, height) = (800, 600);
 
-    let mut camera_binding = CameraBinding::new(app.context.device(), &camera);
+    let mut camera = Camera::new((0.0, 0.0, 2.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
+    let projection = Projection::new(width, height, cgmath::Deg(45.0), 0.1, 100.0);
+
+    let mut gpu_camera = GPUCamera::new(app.context.device(), &camera, &projection);
 
     let pentagon_texture = Texture::from_bytes(
         app.context.device(),
@@ -76,7 +72,7 @@ fn main() {
         .with_vertex_buffers(vec![Vertex::layout()])
         .with_bind_group_layouts(&[
             &pentagon_texture.bind_group_layout(),
-            &camera_binding.bind_group_layout(),
+            &gpu_camera.bind_group_layout(),
         ])
         .build(),
     );
@@ -120,12 +116,26 @@ fn main() {
         .drawables_mut()
         .push(pentagon);
 
+    let mut angle = 0.0;
+    let radius = 2.0;
+
     app.run_with(ControlFlow::Poll, |windows, window_id| {
         if let Some(window) = windows.get_mut(&window_id) {
             let mut frame = window.frame()?;
 
-            camera.right(0.01);
-            camera_binding.update(frame.context.queue(), &camera);
+            angle += 0.01;
+
+            if angle > std::f32::consts::TAU {
+                angle -= std::f32::consts::TAU;
+            }
+
+            let x = radius * angle.cos();
+            let z = radius * angle.sin();
+
+            camera.position = cgmath::Point3::new(x, 0.0, z);
+            camera.yaw = cgmath::Rad::atan2(z, x) + cgmath::Rad(std::f32::consts::PI);
+
+            gpu_camera.update(frame.context.queue(), &camera, &projection);
 
             {
                 let mut render_pass =
@@ -146,7 +156,7 @@ fn main() {
                             timestamp_writes: None,
                         });
 
-                render_pass.set_bind_group(1, &camera_binding.bind_group(), &[]);
+                render_pass.set_bind_group(1, &gpu_camera.bind_group(), &[]);
 
                 for drawable in window.drawables() {
                     drawable.draw(&mut render_pass);

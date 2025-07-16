@@ -1,90 +1,96 @@
-use cgmath::{InnerSpace, SquareMatrix};
+use cgmath::{InnerSpace, Matrix4, Point3, Rad, SquareMatrix, Vector3, Vector4};
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 
-#[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::from_cols(
-    cgmath::Vector4::new(1.0, 0.0, 0.0, 0.0),
-    cgmath::Vector4::new(0.0, 1.0, 0.0, 0.0),
-    cgmath::Vector4::new(0.0, 0.0, 0.5, 0.0),
-    cgmath::Vector4::new(0.0, 0.0, 0.5, 1.0),
+pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::from_cols(
+    Vector4::new(1.0, 0.0, 0.0, 0.0),
+    Vector4::new(0.0, 1.0, 0.0, 0.0),
+    Vector4::new(0.0, 0.0, 0.5, 0.0),
+    Vector4::new(0.0, 0.0, 0.5, 1.0),
 );
 
 pub struct Camera {
-    pub eye: cgmath::Point3<f32>,
-    pub target: cgmath::Point3<f32>,
-    pub up: cgmath::Vector3<f32>,
+    pub position: Point3<f32>,
+    pub yaw: Rad<f32>,
+    pub pitch: Rad<f32>,
+}
+
+impl Camera {
+    pub fn build_matrix(&self) -> Matrix4<f32> {
+        let (sin_pitch, cos_pitch) = self.pitch.0.sin_cos();
+        let (sin_yaw, cos_yaw) = self.yaw.0.sin_cos();
+
+        Matrix4::look_to_rh(
+            self.position,
+            Vector3::new(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw).normalize(),
+            Vector3::unit_y(),
+        )
+    }
+
+    pub fn new<V: Into<Point3<f32>>, Y: Into<Rad<f32>>, P: Into<Rad<f32>>>(
+        position: V,
+        yaw: Y,
+        pitch: P,
+    ) -> Self {
+        Self {
+            position: position.into(),
+            yaw: yaw.into(),
+            pitch: pitch.into(),
+        }
+    }
+}
+
+pub struct Projection {
     pub aspect: f32,
-    pub fovy: f32,
+    pub fovy: Rad<f32>,
     pub znear: f32,
     pub zfar: f32,
 }
 
-impl Camera {
-    pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
-
-        let projection =
-            cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
-
-        OPENGL_TO_WGPU_MATRIX * projection * view
+impl Projection {
+    pub fn build_matrix(&self) -> Matrix4<f32> {
+        OPENGL_TO_WGPU_MATRIX * cgmath::perspective(self.fovy, self.aspect, self.znear, self.zfar)
     }
 
-    pub fn forward(&mut self, distance: f32) {
-        let forward = self.target - self.eye;
-
-        if forward.magnitude() > distance {
-            self.eye += forward.normalize() * distance;
+    pub fn new<F: Into<Rad<f32>>>(width: u32, height: u32, fovy: F, znear: f32, zfar: f32) -> Self {
+        Self {
+            aspect: width as f32 / height as f32,
+            fovy: fovy.into(),
+            znear,
+            zfar,
         }
-    }
-
-    pub fn backward(&mut self, distance: f32) {
-        self.eye -= (self.target - self.eye).normalize() * distance;
-    }
-
-    pub fn right(&mut self, distance: f32) {
-        let forward = self.target - self.eye;
-
-        self.eye = self.target
-            - (forward + forward.normalize().cross(self.up) * distance).normalize()
-                * forward.magnitude();
-    }
-
-    pub fn left(&mut self, distance: f32) {
-        let forward = self.target - self.eye;
-
-        self.eye = self.target
-            - (forward - forward.normalize().cross(self.up) * distance).normalize()
-                * forward.magnitude();
     }
 }
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
+    pub view_position: [f32; 4],
     pub view_projection: [[f32; 4]; 4],
 }
 
 impl CameraUniform {
-    pub fn update_view_projection(&mut self, camera: &Camera) {
-        self.view_projection = camera.build_view_projection_matrix().into();
+    pub fn update_view_projection(&mut self, camera: &Camera, projection: &Projection) {
+        self.view_position = camera.position.to_homogeneous().into();
+        self.view_projection = (projection.build_matrix() * camera.build_matrix()).into();
     }
 
     pub fn new() -> Self {
         Self {
+            view_position: [0.0; 4],
             view_projection: cgmath::Matrix4::identity().into(),
         }
     }
 }
 
-pub struct CameraBinding {
+pub struct GPUCamera {
     pub uniform: CameraUniform,
     buffer: wgpu::Buffer,
     bind_group_layout: Arc<wgpu::BindGroupLayout>,
     bind_group: Arc<wgpu::BindGroup>,
 }
 
-impl CameraBinding {
+impl GPUCamera {
     pub fn buffer(&self) -> &wgpu::Buffer {
         &self.buffer
     }
@@ -97,16 +103,16 @@ impl CameraBinding {
         &self.bind_group
     }
 
-    pub fn update(&mut self, queue: &wgpu::Queue, camera: &Camera) {
-        self.uniform.update_view_projection(camera);
+    pub fn update(&mut self, queue: &wgpu::Queue, camera: &Camera, projection: &Projection) {
+        self.uniform.update_view_projection(&camera, &projection);
 
         queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
     }
 
-    pub fn new(device: &wgpu::Device, camera: &Camera) -> Self {
+    pub fn new(device: &wgpu::Device, camera: &Camera, projection: &Projection) -> Self {
         let mut uniform = CameraUniform::new();
 
-        uniform.update_view_projection(&camera);
+        uniform.update_view_projection(&camera, &projection);
 
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: None,
