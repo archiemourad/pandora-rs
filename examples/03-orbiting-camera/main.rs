@@ -1,5 +1,8 @@
-use cgmath::Angle;
-use std::sync::Arc;
+use cgmath::{Angle, Deg, Point3, Rad};
+use std::{
+    f32::consts::{PI, TAU},
+    sync::Arc,
+};
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
@@ -49,9 +52,9 @@ fn main() {
 
     let (width, height) = (800, 600);
 
-    let mut camera = Camera::new((0.0, 0.0, 2.0), cgmath::Deg(-90.0), cgmath::Deg(0.0));
-    let projection = Projection::new(width, height, cgmath::Deg(45.0), 0.1, 100.0);
+    let projection = Projection::new(width, height, Deg(45.0), 0.1, 100.0);
 
+    let mut camera = Camera::new((0.0, 0.0, 2.0), Deg(-90.0), Deg(0.0));
     let mut gpu_camera = GPUCamera::new(app.context.device(), &camera, &projection);
 
     let pentagon_texture = Texture::from_bytes(
@@ -116,8 +119,8 @@ fn main() {
         .drawables_mut()
         .push(pentagon);
 
-    let mut angle = 0.0;
     let radius = 2.0;
+    let mut angle = 0.0;
 
     app.run_with(ControlFlow::Poll, |windows, window_id| {
         if let Some(window) = windows.get_mut(&window_id) {
@@ -125,15 +128,15 @@ fn main() {
 
             angle += 0.01;
 
-            if angle > std::f32::consts::TAU {
-                angle -= std::f32::consts::TAU;
+            if angle > TAU {
+                angle -= TAU;
             }
 
             let x = radius * angle.cos();
             let z = radius * angle.sin();
 
-            camera.position = cgmath::Point3::new(x, 0.0, z);
-            camera.yaw = cgmath::Rad::atan2(z, x) + cgmath::Rad(std::f32::consts::PI);
+            camera.position = Point3::new(x, 0.0, z);
+            camera.yaw = Rad::atan2(z, x) + Rad(PI);
 
             gpu_camera.update(frame.context.queue(), &camera, &projection);
 
