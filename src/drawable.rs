@@ -6,6 +6,7 @@ pub trait Drawable {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>);
 }
 
+#[derive(Clone)]
 pub struct RenderObject {
     mesh: Arc<Mesh>,
     material: Arc<Material>,

@@ -9,6 +9,7 @@ pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::from_cols(
     Vector4::new(0.0, 0.0, 0.5, 1.0),
 );
 
+#[derive(Debug, Copy, Clone)]
 pub struct Camera {
     pub position: Point3<f32>,
     pub yaw: Rad<f32>,
@@ -40,6 +41,7 @@ impl Camera {
     }
 }
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Projection {
     pub aspect: f32,
     pub fovy: Rad<f32>,
@@ -78,7 +80,7 @@ impl CameraUniform {
     pub fn new() -> Self {
         Self {
             view_position: [0.0; 4],
-            view_projection: cgmath::Matrix4::identity().into(),
+            view_projection: Matrix4::identity().into(),
         }
     }
 }

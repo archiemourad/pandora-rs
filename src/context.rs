@@ -25,6 +25,7 @@ impl WGPUContext {
     }
 }
 
+#[derive(Debug)]
 pub struct WGPUContextBuilder<'a, 'b> {
     instance_descriptor: wgpu::InstanceDescriptor,
     adapter_options: wgpu::RequestAdapterOptions<'a, 'b>,
