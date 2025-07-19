@@ -10,6 +10,38 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    pub fn new<T: VertexLayout>(
+        device: &wgpu::Device,
+        vertices: &[T],
+        indices: Option<&[u32]>,
+        usage: wgpu::BufferUsages,
+    ) -> Self {
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: bytemuck::cast_slice(vertices),
+            usage,
+        });
+
+        let (index_buffer, index_count) = if let Some(indices) = indices {
+            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(indices),
+                usage,
+            });
+
+            (Some(buffer), indices.len() as u32)
+        } else {
+            (None, 0)
+        };
+
+        Self {
+            vertex_buffer,
+            index_buffer,
+            vertex_count: vertices.len() as u32,
+            index_count,
+        }
+    }
+
     pub fn vertex_buffer(&self) -> &wgpu::Buffer {
         &self.vertex_buffer
     }
@@ -61,37 +93,5 @@ impl Mesh {
 
     pub fn index_count(&self) -> u32 {
         self.index_count
-    }
-
-    pub fn new<T: VertexLayout>(
-        device: &wgpu::Device,
-        vertices: &[T],
-        indices: Option<&[u32]>,
-        usage: wgpu::BufferUsages,
-    ) -> Self {
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: bytemuck::cast_slice(vertices),
-            usage,
-        });
-
-        let (index_buffer, index_count) = if let Some(indices) = indices {
-            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
-                contents: bytemuck::cast_slice(indices),
-                usage,
-            });
-
-            (Some(buffer), indices.len() as u32)
-        } else {
-            (None, 0)
-        };
-
-        Self {
-            vertex_buffer,
-            index_buffer,
-            vertex_count: vertices.len() as u32,
-            index_count,
-        }
     }
 }

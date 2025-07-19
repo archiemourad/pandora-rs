@@ -17,56 +17,15 @@ impl<'a> Frame<'a> {
     }
 }
 
-pub struct Window<'window> {
+pub struct Window<'w> {
     context: Arc<WGPUContext>,
     window: Arc<winit::window::Window>,
-    surface: wgpu::Surface<'window>,
+    surface: wgpu::Surface<'w>,
     config: wgpu::SurfaceConfiguration,
     drawables: Vec<Arc<dyn Drawable>>,
 }
 
-impl<'window> Window<'window> {
-    pub fn window(&self) -> &winit::window::Window {
-        &self.window
-    }
-
-    pub fn title(&self) -> String {
-        self.window.title()
-    }
-
-    pub fn surface(&self) -> &wgpu::Surface<'window> {
-        &self.surface
-    }
-
-    pub fn get_surface_capabilities(&self) -> wgpu::SurfaceCapabilities {
-        self.surface.get_capabilities(&self.context.adapter())
-    }
-
-    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
-        &self.config
-    }
-
-    pub fn size(&self) -> PhysicalSize<u32> {
-        self.window.inner_size()
-    }
-
-    pub fn drawables(&self) -> &[Arc<dyn Drawable>] {
-        &self.drawables
-    }
-
-    pub fn drawables_mut(&mut self) -> &mut Vec<Arc<dyn Drawable>> {
-        &mut self.drawables
-    }
-
-    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
-        if new_size.width > 0 && new_size.height > 0 {
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
-
-            self.surface.configure(&self.context.device(), &self.config);
-        }
-    }
-
+impl<'w> Window<'w> {
     pub fn new(
         context: Arc<WGPUContext>,
         window: Arc<winit::window::Window>,
@@ -106,6 +65,53 @@ impl<'window> Window<'window> {
             config,
             drawables: Vec::new(),
         })
+    }
+
+    pub fn window(&self) -> &Arc<winit::window::Window> {
+        &self.window
+    }
+
+    pub fn title(&self) -> String {
+        self.window.title()
+    }
+
+    pub fn surface(&self) -> &wgpu::Surface<'w> {
+        &self.surface
+    }
+
+    pub fn get_capabilities(&self) -> wgpu::SurfaceCapabilities {
+        self.surface.get_capabilities(&self.context.adapter())
+    }
+
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
+    }
+
+    pub fn size(&self) -> PhysicalSize<u32> {
+        self.window.inner_size()
+    }
+
+    pub fn drawables(&self) -> &[Arc<dyn Drawable>] {
+        &self.drawables
+    }
+
+    pub fn drawables_mut(&mut self) -> &mut Vec<Arc<dyn Drawable>> {
+        &mut self.drawables
+    }
+
+    pub fn configure(&mut self, config: &wgpu::SurfaceConfiguration) {
+        self.config = config.clone();
+        self.surface.configure(&self.context.device(), &self.config);
+    }
+
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.configure(&wgpu::SurfaceConfiguration {
+                width: new_size.width,
+                height: new_size.height,
+                ..self.config.clone()
+            });
+        }
     }
 
     pub fn frame(&self) -> Result<Frame, wgpu::SurfaceError> {

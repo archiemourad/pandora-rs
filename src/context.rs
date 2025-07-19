@@ -27,24 +27,24 @@ impl WGPUContext {
 
 #[derive(Debug)]
 pub struct WGPUContextBuilder<'a, 'b> {
-    instance_descriptor: wgpu::InstanceDescriptor,
-    adapter_options: wgpu::RequestAdapterOptions<'a, 'b>,
-    device_descriptor: wgpu::DeviceDescriptor<'a>,
+    instance_desc: wgpu::InstanceDescriptor,
+    adapter_opts: wgpu::RequestAdapterOptions<'a, 'b>,
+    device_desc: wgpu::DeviceDescriptor<'a>,
 }
 
 impl<'a, 'b> Default for WGPUContextBuilder<'a, 'b> {
     fn default() -> Self {
         Self {
-            instance_descriptor: wgpu::InstanceDescriptor {
+            instance_desc: wgpu::InstanceDescriptor {
                 backends: wgpu::Backends::PRIMARY,
                 ..Default::default()
             },
-            adapter_options: wgpu::RequestAdapterOptions {
+            adapter_opts: wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: None,
                 force_fallback_adapter: false,
             },
-            device_descriptor: wgpu::DeviceDescriptor {
+            device_desc: wgpu::DeviceDescriptor {
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
                 label: None,
@@ -59,29 +59,28 @@ impl<'a, 'b> WGPUContextBuilder<'a, 'b> {
         Self::default()
     }
 
-    pub fn with_instance_descriptor(mut self, descriptor: wgpu::InstanceDescriptor) -> Self {
-        self.instance_descriptor = descriptor;
+    pub fn with_instance_desc(mut self, desc: wgpu::InstanceDescriptor) -> Self {
+        self.instance_desc = desc;
         self
     }
 
-    pub fn with_adapter_options(mut self, options: wgpu::RequestAdapterOptions<'a, 'b>) -> Self {
-        self.adapter_options = options;
+    pub fn with_adapter_opts(mut self, opts: wgpu::RequestAdapterOptions<'a, 'b>) -> Self {
+        self.adapter_opts = opts;
         self
     }
 
-    pub fn with_device_descriptor(mut self, descriptor: wgpu::DeviceDescriptor<'a>) -> Self {
-        self.device_descriptor = descriptor;
+    pub fn with_device_desc(mut self, desc: wgpu::DeviceDescriptor<'a>) -> Self {
+        self.device_desc = desc;
         self
     }
 
     pub fn build(self) -> Result<WGPUContext, WGPUContextError> {
-        let instance = wgpu::Instance::new(self.instance_descriptor);
+        let instance = wgpu::Instance::new(self.instance_desc);
 
-        let adapter = pollster::block_on(instance.request_adapter(&self.adapter_options))
+        let adapter = pollster::block_on(instance.request_adapter(&self.adapter_opts))
             .ok_or(WGPUContextError::AdapterNotFound)?;
 
-        let (device, queue) =
-            pollster::block_on(adapter.request_device(&self.device_descriptor, None))?;
+        let (device, queue) = pollster::block_on(adapter.request_device(&self.device_desc, None))?;
 
         Ok(WGPUContext {
             instance,

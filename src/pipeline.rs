@@ -3,10 +3,10 @@ use std::num::NonZeroU32;
 #[derive(Debug, Clone)]
 pub struct PipelineBuilder<'a> {
     device: &'a wgpu::Device,
-    shader_descriptor: wgpu::ShaderModuleDescriptor<'a>,
+    shader_desc: wgpu::ShaderModuleDescriptor<'a>,
     vs_entry: &'a str,
     fs_entry: &'a str,
-    layout_descriptor: wgpu::PipelineLayoutDescriptor<'a>,
+    layout_desc: wgpu::PipelineLayoutDescriptor<'a>,
     vertex_buffers: Vec<wgpu::VertexBufferLayout<'a>>,
     color_targets: Vec<Option<wgpu::ColorTargetState>>,
     primitive: wgpu::PrimitiveState,
@@ -18,17 +18,17 @@ pub struct PipelineBuilder<'a> {
 impl<'a> PipelineBuilder<'a> {
     pub fn new(
         device: &'a wgpu::Device,
-        shader_descriptor: wgpu::ShaderModuleDescriptor<'a>,
+        shader_desc: wgpu::ShaderModuleDescriptor<'a>,
         vs_entry: &'a str,
         fs_entry: &'a str,
         format: wgpu::TextureFormat,
     ) -> Self {
         Self {
             device,
-            shader_descriptor,
+            shader_desc,
             vs_entry,
             fs_entry,
-            layout_descriptor: wgpu::PipelineLayoutDescriptor {
+            layout_desc: wgpu::PipelineLayoutDescriptor {
                 label: None,
                 bind_group_layouts: &[],
                 push_constant_ranges: &[],
@@ -58,11 +58,8 @@ impl<'a> PipelineBuilder<'a> {
         }
     }
 
-    pub fn with_layout_descriptor(
-        mut self,
-        layout_descriptor: wgpu::PipelineLayoutDescriptor<'a>,
-    ) -> Self {
-        self.layout_descriptor = layout_descriptor;
+    pub fn with_layout_desc(mut self, layout_desc: wgpu::PipelineLayoutDescriptor<'a>) -> Self {
+        self.layout_desc = layout_desc;
         self
     }
 
@@ -70,7 +67,7 @@ impl<'a> PipelineBuilder<'a> {
         mut self,
         bind_group_layouts: &'a [&'a wgpu::BindGroupLayout],
     ) -> Self {
-        self.layout_descriptor.bind_group_layouts = bind_group_layouts;
+        self.layout_desc.bind_group_layouts = bind_group_layouts;
         self
     }
 
@@ -111,9 +108,9 @@ impl<'a> PipelineBuilder<'a> {
     }
 
     pub fn build(self) -> wgpu::RenderPipeline {
-        let shader = self.device.create_shader_module(self.shader_descriptor);
+        let shader = self.device.create_shader_module(self.shader_desc);
 
-        let layout = self.device.create_pipeline_layout(&self.layout_descriptor);
+        let layout = self.device.create_pipeline_layout(&self.layout_desc);
 
         self.device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {

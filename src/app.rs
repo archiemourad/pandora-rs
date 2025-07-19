@@ -1,4 +1,4 @@
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 use winit::{
     error::EventLoopError,
@@ -13,13 +13,13 @@ use crate::{
     window::Window,
 };
 
-pub struct App<'window> {
+pub struct App<'w> {
     pub context: Arc<WGPUContext>,
     event_loop: EventLoop<()>,
-    windows: HashMap<WindowId, Window<'window>>,
+    windows: HashMap<WindowId, Window<'w>>,
 }
 
-impl<'window> App<'window> {
+impl<'w> App<'w> {
     fn format_window_id(id: &WindowId) -> String {
         format!("{:?}", id)
             .chars()
@@ -27,21 +27,40 @@ impl<'window> App<'window> {
             .collect()
     }
 
+    pub fn new(builder: WGPUContextBuilder) -> Result<Self, AppError> {
+        info!("Initializing app...");
+
+        let context = Arc::new(builder.build()?);
+        let event_loop = EventLoop::new()?;
+
+        Ok(Self {
+            context,
+            event_loop,
+            windows: HashMap::new(),
+        })
+    }
+
     pub fn event_loop(&self) -> &EventLoop<()> {
         &self.event_loop
     }
 
-    pub fn windows(&self) -> &HashMap<WindowId, Window<'window>> {
+    pub fn windows(&self) -> &HashMap<WindowId, Window<'w>> {
         &self.windows
     }
 
-    pub fn window_mut(&mut self, id: WindowId) -> Option<&mut Window<'window>> {
+    pub fn windows_mut(&mut self) -> &mut HashMap<WindowId, Window<'w>> {
+        &mut self.windows
+    }
+
+    pub fn window(&self, id: &WindowId) -> Option<&Window<'w>> {
+        self.windows.get(&id)
+    }
+
+    pub fn window_mut(&mut self, id: &WindowId) -> Option<&mut Window<'w>> {
         self.windows.get_mut(&id)
     }
 
-    pub fn add_window(&mut self, builder: WindowBuilder) -> Result<WindowId, CreateWindowError> {
-        let window = builder.build(&self.event_loop)?;
-
+    pub fn add_window(&mut self, window: winit::window::Window) -> Result<WindowId, CreateWindowError> {
         let window_id = window.id();
 
         let title = window.title();
@@ -63,28 +82,19 @@ impl<'window> App<'window> {
         Ok(window_id)
     }
 
-    pub fn new(builder: WGPUContextBuilder) -> Result<Self, AppError> {
-        info!("Initializing app...");
-
-        let context = Arc::new(builder.build()?);
-        let event_loop = EventLoop::new()?;
-
-        Ok(Self {
-            context,
-            event_loop,
-            windows: HashMap::new(),
-        })
+    pub fn add_window_with_builder(&mut self, builder: WindowBuilder) -> Result<WindowId, CreateWindowError> {
+        self.add_window(builder.build(&self.event_loop)?)
     }
 
     pub fn run_with<F>(
         mut self,
         control_flow: ControlFlow,
-        mut draw: F,
+        mut redraw_callback: F,
     ) -> Result<(), EventLoopError>
     where
         F: FnMut(
-            &mut HashMap<WindowId, Window<'window>>,
-            WindowId,
+            &mut HashMap<WindowId, Window<'w>>,
+            &WindowId,
         ) -> Result<(), wgpu::SurfaceError>,
     {
         self.event_loop.set_control_flow(control_flow);
@@ -96,8 +106,7 @@ impl<'window> App<'window> {
                 WindowEvent::CloseRequested => {
                     info!(
                         "Request to close window: {} (id: {})",
-                        self.windows
-                            .get(&window_id)
+                        self.windows.get(&window_id)
                             .map_or("Unknown".to_string(), |w| format!("'{}'", w.title())),
                             Self::format_window_id(&window_id)
                     );
@@ -113,14 +122,6 @@ impl<'window> App<'window> {
                 WindowEvent::Resized(new_size) => {
                     if let Some(window) = self.windows.get_mut(&window_id) {
                         window.resize(new_size);
-
-                        debug!(
-                            "Window resized: '{}' (id: {}) to: {}x{}",
-                            window.title(),
-                            Self::format_window_id(&window_id),
-                            new_size.width,
-                            new_size.height
-                        );
                     }
                 }
                 WindowEvent::RedrawRequested => {
@@ -128,7 +129,7 @@ impl<'window> App<'window> {
                         window.window().request_redraw();
                     }
 
-                    if let Err(e) = draw(&mut self.windows, window_id) {
+                    if let Err(e) = redraw_callback(&mut self.windows, &window_id) {
                         if let Some(window) = self.windows.get_mut(&window_id) {
                             match e {
                                 wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated => {
@@ -159,7 +160,7 @@ impl<'window> App<'window> {
                     }
                 }
                 _ => (),
-            },
+            }
             _ => (),
         })
     }

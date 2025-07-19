@@ -7,16 +7,18 @@ fn main() {
 
     let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
 
-    app.add_window(
+    let (width, height) = (800, 600);
+
+    app.add_window_with_builder(
         WindowBuilder::new()
             .with_title("Simple Window 1")
-            .with_inner_size(PhysicalSize::new(800, 600)),
+            .with_inner_size(PhysicalSize::new(width, height)),
     )
     .expect("Failed to add window 1");
-    app.add_window(
+    app.add_window_with_builder(
         WindowBuilder::new()
             .with_title("Simple Window 2")
-            .with_inner_size(PhysicalSize::new(800, 600)),
+            .with_inner_size(PhysicalSize::new(width, height)),
     )
     .expect("Failed to add window 2");
 

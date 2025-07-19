@@ -2,7 +2,7 @@ use std::sync::Arc;
 use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
 
 use pandora::{
-    app::App, context::WGPUContextBuilder, drawable::RenderObject, material::Material, mesh::Mesh,
+    app::App, context::WGPUContextBuilder, drawable::Model, material::Material, mesh::Mesh,
     pipeline::PipelineBuilder, texture::Texture, vertex::VertexLayout,
 };
 
@@ -39,6 +39,8 @@ fn main() {
 
     let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
 
+    let (width, height) = (800, 600);
+
     let pentagon_texture = Texture::from_bytes(
         app.context.device(),
         app.context.queue(),
@@ -60,17 +62,17 @@ fn main() {
     );
 
     let window1_id = app
-        .add_window(
+        .add_window_with_builder(
             WindowBuilder::new()
                 .with_title("Pentagon Window 1")
-                .with_inner_size(PhysicalSize::new(800, 600)),
+                .with_inner_size(PhysicalSize::new(width, height)),
         )
         .expect("Failed to add window 1");
     let window2_id = app
-        .add_window(
+        .add_window_with_builder(
             WindowBuilder::new()
                 .with_title("Pentagon Window 2")
-                .with_inner_size(PhysicalSize::new(800, 600)),
+                .with_inner_size(PhysicalSize::new(width, height)),
         )
         .expect("Failed to add window 2");
 
@@ -86,14 +88,14 @@ fn main() {
         diffuse_bind_group: pentagon_texture.bind_group().clone(),
     });
 
-    let pentagon = Arc::new(RenderObject::new(pentagon_mesh, pentagon_material));
+    let pentagon = Arc::new(Model::new(pentagon_mesh, pentagon_material));
 
-    app.window_mut(window1_id)
+    app.window_mut(&window1_id)
         .expect("Failed to get window 1")
         .drawables_mut()
         .push(pentagon.clone());
 
-    app.window_mut(window2_id)
+    app.window_mut(&window2_id)
         .expect("Failed to get window 2")
         .drawables_mut()
         .push(pentagon);

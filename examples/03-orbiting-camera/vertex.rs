@@ -3,7 +3,7 @@ use std::mem;
 use pandora::vertex::VertexLayout;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],

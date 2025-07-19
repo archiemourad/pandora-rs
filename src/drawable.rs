@@ -7,26 +7,34 @@ pub trait Drawable {
 }
 
 #[derive(Clone)]
-pub struct RenderObject {
+pub struct Model {
     mesh: Arc<Mesh>,
     material: Arc<Material>,
 }
 
-impl RenderObject {
+impl Model {
+    pub fn new(mesh: Arc<Mesh>, material: Arc<Material>) -> Self {
+        Self { mesh, material }
+    }
+
     pub fn mesh(&self) -> &Arc<Mesh> {
         &self.mesh
+    }
+
+    pub fn set_mesh(&mut self, mesh: Arc<Mesh>) {
+        self.mesh = mesh;
     }
 
     pub fn material(&self) -> &Arc<Material> {
         &self.material
     }
 
-    pub fn new(mesh: Arc<Mesh>, material: Arc<Material>) -> Self {
-        Self { mesh, material }
+    pub fn set_material(&mut self, material: Arc<Material>) {
+        self.material = material;
     }
 }
 
-impl Drawable for RenderObject {
+impl Drawable for Model {
     fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.material.pipeline);
         render_pass.set_bind_group(0, &self.material.diffuse_bind_group, &[]);
