@@ -104,17 +104,17 @@ impl<'w> Window<'w> {
         self.surface.configure(&self.context.device(), &self.config);
     }
 
-    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
-        if new_size.width > 0 && new_size.height > 0 {
+    pub fn resize(&mut self, size: PhysicalSize<u32>) {
+        if size.width > 0 && size.height > 0 {
             self.configure(&wgpu::SurfaceConfiguration {
-                width: new_size.width,
-                height: new_size.height,
+                width: size.width,
+                height: size.height,
                 ..self.config.clone()
             });
         }
     }
 
-    pub fn frame(&self) -> Result<Frame, wgpu::SurfaceError> {
+    pub fn frame(&self) -> Result<Frame<'_>, wgpu::SurfaceError> {
         let surface_texture = self.surface.get_current_texture()?;
 
         let view = surface_texture

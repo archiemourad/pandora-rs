@@ -1,5 +1,9 @@
 use std::sync::Arc;
-use winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder};
+use winit::{
+    dpi::PhysicalSize,
+    event::{Event, WindowEvent},
+    window::WindowBuilder,
+};
 
 use pandora::{
     app::App, context::WGPUContextBuilder, drawable::Model, material::Material, mesh::Mesh,
@@ -100,38 +104,70 @@ fn main() {
         .drawables_mut()
         .push(pentagon);
 
-    app.run_with(ControlFlow::Poll, |windows, window_id| {
-        if let Some(window) = windows.get_mut(&window_id) {
-            let mut frame = window.frame()?;
+    let mut running = true;
 
-            {
-                let mut render_pass =
-                    frame
-                        .encoder
-                        .begin_render_pass(&wgpu::RenderPassDescriptor {
-                            label: None,
-                            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                                view: &frame.view,
-                                resolve_target: None,
-                                ops: wgpu::Operations {
-                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                    store: wgpu::StoreOp::Store,
-                                },
-                            })],
-                            depth_stencil_attachment: None,
-                            occlusion_query_set: None,
-                            timestamp_writes: None,
-                        });
+    while running {
+        app.poll_events(|event, elwt, windows| match event {
+            Event::WindowEvent { event, window_id } => match event {
+                WindowEvent::CloseRequested => {
+                    if App::close_window(windows, window_id) {
+                        elwt.exit();
 
-                for drawable in window.drawables() {
-                    drawable.draw(&mut render_pass);
+                        running = false;
+                    }
                 }
-            }
+                WindowEvent::Resized(size) => {
+                    App::resize_window(windows, window_id, size);
+                }
+                WindowEvent::RedrawRequested => {
+                    if let Some(window) = windows.get_mut(window_id) {
+                        window.window().request_redraw();
 
-            frame.present();
-        }
+                        let mut frame = match window.frame() {
+                            Ok(frame) => frame,
+                            Err(e) => {
+                                if App::handle_redraw_error(windows, window_id, e) {
+                                    elwt.exit();
 
-        Ok(())
-    })
-    .expect("Failed to run app");
+                                    running = false;
+                                }
+
+                                return;
+                            }
+                        };
+
+                        {
+                            let mut render_pass =
+                                frame
+                                    .encoder
+                                    .begin_render_pass(&wgpu::RenderPassDescriptor {
+                                        label: None,
+                                        color_attachments: &[Some(
+                                            wgpu::RenderPassColorAttachment {
+                                                view: &frame.view,
+                                                resolve_target: None,
+                                                ops: wgpu::Operations {
+                                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                                    store: wgpu::StoreOp::Store,
+                                                },
+                                            },
+                                        )],
+                                        depth_stencil_attachment: None,
+                                        occlusion_query_set: None,
+                                        timestamp_writes: None,
+                                    });
+
+                            for drawable in window.drawables() {
+                                drawable.draw(&mut render_pass);
+                            }
+                        }
+
+                        frame.present();
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        });
+    }
 }
