@@ -1,12 +1,13 @@
 use cgmath::{Angle, Deg, Point3, Rad};
 use std::{
+    collections::HashMap,
     f32::consts::{PI, TAU},
     sync::Arc,
 };
 use winit::{
     dpi::PhysicalSize,
     event::{Event, WindowEvent},
-    window::WindowBuilder,
+    window::{WindowBuilder, WindowId},
 };
 
 use pandora::{
@@ -49,6 +50,11 @@ const VERTICES: &[Vertex] = &[
 
 const INDICES: &[u32] = &[0, 1, 2, 0, 2, 3, 0, 3, 4];
 
+struct WindowState {
+    camera: Camera,
+    gpu_camera: GPUCamera,
+}
+
 fn main() {
     env_logger::init();
 
@@ -58,8 +64,8 @@ fn main() {
 
     let projection = Projection::new(width, height, Deg(45.0), 0.1, 100.0);
 
-    let mut camera = Camera::new((0.0, 0.0, 2.0), Deg(-90.0), Deg(0.0));
-    let mut gpu_camera = GPUCamera::new(app.context.device(), &camera, &projection);
+    let camera = Camera::new((0.0, 0.0, 2.0), Deg(-90.0), Deg(0.0));
+    let gpu_camera = GPUCamera::new(app.context.device(), &camera, &projection);
 
     let pentagon_texture = Texture::from_bytes(
         app.context.device(),
@@ -84,21 +90,6 @@ fn main() {
         .build(),
     );
 
-    let window1_id = app
-        .add_window_with_builder(
-            WindowBuilder::new()
-                .with_title("Orbit Window 1")
-                .with_inner_size(PhysicalSize::new(width, height)),
-        )
-        .expect("Failed to add window 1");
-    let window2_id = app
-        .add_window_with_builder(
-            WindowBuilder::new()
-                .with_title("Orbit Window 2")
-                .with_inner_size(PhysicalSize::new(width, height)),
-        )
-        .expect("Failed to add window 2");
-
     let pentagon_mesh = Arc::new(Mesh::new(
         app.context.device(),
         VERTICES,
@@ -113,15 +104,32 @@ fn main() {
 
     let pentagon = Arc::new(Model::new(pentagon_mesh, pentagon_material));
 
-    app.window_mut(&window1_id)
-        .expect("Failed to get window 1")
-        .drawables_mut()
-        .push(pentagon.clone());
+    let mut window_states: HashMap<WindowId, WindowState> = HashMap::new();
 
-    app.window_mut(&window2_id)
-        .expect("Failed to get window 2")
-        .drawables_mut()
-        .push(pentagon);
+    for i in 0..2 {
+        let window_id = app
+            .add_window_with_builder(
+                WindowBuilder::new()
+                    .with_title(format!("Orbit Window {}", i + 1))
+                    .with_inner_size(PhysicalSize::new(width, height)),
+            )
+            .expect(format!("Failed to add window {}", i + 1).as_str());
+
+        app.window_mut(&window_id)
+            .expect(format!("Failed to get window {}", i + 1).as_str())
+            .drawables_mut()
+            .push(pentagon.clone());
+
+        let camera_clone = camera.clone();
+
+        window_states.insert(
+            window_id,
+            WindowState {
+                camera: camera_clone,
+                gpu_camera: GPUCamera::new(app.context.device(), &camera_clone, &projection),
+            },
+        );
+    }
 
     let radius = 2.0;
     let mut angle = 0.0;
@@ -143,64 +151,72 @@ fn main() {
                 }
                 WindowEvent::RedrawRequested => {
                     if let Some(window) = windows.get_mut(window_id) {
-                        window.window().request_redraw();
+                        if let Some(state) = window_states.get_mut(window_id) {
+                            window.window().request_redraw();
 
-                        let mut frame = match window.frame() {
-                            Ok(frame) => frame,
-                            Err(e) => {
-                                if App::handle_redraw_error(windows, window_id, e) {
-                                    elwt.exit();
+                            let mut frame = match window.frame() {
+                                Ok(frame) => frame,
+                                Err(e) => {
+                                    if App::handle_redraw_error(windows, window_id, e) {
+                                        elwt.exit();
 
-                                    running = false;
+                                        running = false;
+                                    }
+
+                                    return;
                                 }
+                            };
 
-                                return;
+                            angle += 0.01;
+
+                            if angle > TAU {
+                                angle -= TAU;
                             }
-                        };
 
-                        angle += 0.01;
+                            let x = radius * angle.cos();
+                            let z = radius * angle.sin();
 
-                        if angle > TAU {
-                            angle -= TAU;
-                        }
+                            state.camera.position = Point3::new(x, 0.0, z);
+                            state.camera.yaw = Rad::atan2(z, x) + Rad(PI);
 
-                        let x = radius * angle.cos();
-                        let z = radius * angle.sin();
+                            state.gpu_camera.update(
+                                frame.context.queue(),
+                                &state.camera,
+                                &projection,
+                            );
 
-                        camera.position = Point3::new(x, 0.0, z);
-                        camera.yaw = Rad::atan2(z, x) + Rad(PI);
-
-                        gpu_camera.update(frame.context.queue(), &camera, &projection);
-
-                        {
-                            let mut render_pass =
-                                frame
-                                    .encoder
-                                    .begin_render_pass(&wgpu::RenderPassDescriptor {
-                                        label: None,
-                                        color_attachments: &[Some(
-                                            wgpu::RenderPassColorAttachment {
-                                                view: &frame.view,
-                                                resolve_target: None,
-                                                ops: wgpu::Operations {
-                                                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-                                                    store: wgpu::StoreOp::Store,
+                            {
+                                let mut render_pass =
+                                    frame
+                                        .encoder
+                                        .begin_render_pass(&wgpu::RenderPassDescriptor {
+                                            label: None,
+                                            color_attachments: &[Some(
+                                                wgpu::RenderPassColorAttachment {
+                                                    view: &frame.view,
+                                                    resolve_target: None,
+                                                    ops: wgpu::Operations {
+                                                        load: wgpu::LoadOp::Clear(
+                                                            wgpu::Color::BLACK,
+                                                        ),
+                                                        store: wgpu::StoreOp::Store,
+                                                    },
                                                 },
-                                            },
-                                        )],
-                                        depth_stencil_attachment: None,
-                                        occlusion_query_set: None,
-                                        timestamp_writes: None,
-                                    });
+                                            )],
+                                            depth_stencil_attachment: None,
+                                            occlusion_query_set: None,
+                                            timestamp_writes: None,
+                                        });
 
-                            render_pass.set_bind_group(1, &gpu_camera.bind_group(), &[]);
+                                render_pass.set_bind_group(1, &state.gpu_camera.bind_group(), &[]);
 
-                            for drawable in window.drawables() {
-                                drawable.draw(&mut render_pass);
+                                for drawable in window.drawables() {
+                                    drawable.draw(&mut render_pass);
+                                }
                             }
-                        }
 
-                        frame.present();
+                            frame.present();
+                        }
                     }
                 }
                 _ => {}

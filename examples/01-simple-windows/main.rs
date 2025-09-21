@@ -13,18 +13,14 @@ fn main() {
 
     let (width, height) = (800, 600);
 
-    app.add_window_with_builder(
-        WindowBuilder::new()
-            .with_title("Simple Window 1")
-            .with_inner_size(PhysicalSize::new(width, height)),
-    )
-    .expect("Failed to add window 1");
-    app.add_window_with_builder(
-        WindowBuilder::new()
-            .with_title("Simple Window 2")
-            .with_inner_size(PhysicalSize::new(width, height)),
-    )
-    .expect("Failed to add window 2");
+    for i in 0..2 {
+        app.add_window_with_builder(
+            WindowBuilder::new()
+                .with_title(format!("Simple Window {}", i + 1))
+                .with_inner_size(PhysicalSize::new(width, height)),
+        )
+        .expect(format!("Failed to add window {}", i + 1).as_str());
+    }
 
     let mut running = true;
 

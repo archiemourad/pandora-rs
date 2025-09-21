@@ -65,21 +65,6 @@ fn main() {
         .build(),
     );
 
-    let window1_id = app
-        .add_window_with_builder(
-            WindowBuilder::new()
-                .with_title("Pentagon Window 1")
-                .with_inner_size(PhysicalSize::new(width, height)),
-        )
-        .expect("Failed to add window 1");
-    let window2_id = app
-        .add_window_with_builder(
-            WindowBuilder::new()
-                .with_title("Pentagon Window 2")
-                .with_inner_size(PhysicalSize::new(width, height)),
-        )
-        .expect("Failed to add window 2");
-
     let pentagon_mesh = Arc::new(Mesh::new(
         app.context.device(),
         VERTICES,
@@ -94,15 +79,20 @@ fn main() {
 
     let pentagon = Arc::new(Model::new(pentagon_mesh, pentagon_material));
 
-    app.window_mut(&window1_id)
-        .expect("Failed to get window 1")
-        .drawables_mut()
-        .push(pentagon.clone());
+    for i in 0..2 {
+        let window_id = app
+            .add_window_with_builder(
+                WindowBuilder::new()
+                    .with_title(format!("Pentagon Window {}", i + 1))
+                    .with_inner_size(PhysicalSize::new(width, height)),
+            )
+            .expect(format!("Failed to add window {}", i + 1).as_str());
 
-    app.window_mut(&window2_id)
-        .expect("Failed to get window 2")
-        .drawables_mut()
-        .push(pentagon);
+        app.window_mut(&window_id)
+            .expect(format!("Failed to get window {}", i + 1).as_str())
+            .drawables_mut()
+            .push(pentagon.clone());
+    }
 
     let mut running = true;
 
