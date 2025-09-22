@@ -1,13 +1,15 @@
-use cgmath::{Angle, Deg, Point3, Rad};
+use cgmath::{Deg, Rad, Vector3};
 use std::{
-    collections::HashMap,
-    f32::consts::{PI, TAU},
+    collections::{HashMap, HashSet},
+    f32::consts::FRAC_PI_2,
     sync::Arc,
 };
 use winit::{
     dpi::PhysicalSize,
-    event::{Event, WindowEvent},
-    window::{WindowBuilder, WindowId},
+    event::{DeviceEvent, ElementState, Event, MouseButton, WindowEvent},
+    keyboard::{Key, NamedKey},
+    platform::modifier_supplement::KeyEventExtModifierSupplement,
+    window::{CursorGrabMode, WindowBuilder, WindowId},
 };
 
 use pandora::{
@@ -53,6 +55,8 @@ const INDICES: &[u32] = &[0, 1, 2, 0, 2, 3, 0, 3, 4];
 struct WindowState {
     camera: Camera,
     gpu_camera: GPUCamera,
+    pressed_keys: HashSet<Key>,
+    mouse_captured: bool,
 }
 
 fn main() {
@@ -110,7 +114,7 @@ fn main() {
         let window_id = app
             .add_window_with_builder(
                 WindowBuilder::new()
-                    .with_title(format!("Orbit Window {}", i + 1))
+                    .with_title(format!("FPS Camera Window {}", i + 1))
                     .with_inner_size(PhysicalSize::new(width, height)),
             )
             .expect(format!("Failed to add window {}", i + 1).as_str());
@@ -127,17 +131,37 @@ fn main() {
             WindowState {
                 camera: camera_clone,
                 gpu_camera: GPUCamera::new(app.context.device(), &camera_clone, &projection),
+                pressed_keys: HashSet::new(),
+                mouse_captured: false,
             },
         );
     }
-
-    let radius = 2.0;
-    let mut angle = 0.0;
 
     let mut running = true;
 
     while running {
         app.poll_events(|event, elwt, windows| match event {
+            Event::DeviceEvent {
+                event: DeviceEvent::MouseMotion { delta: (dx, dy) },
+                ..
+            } => {
+                for state in window_states.values_mut() {
+                    if state.mouse_captured {
+                        let sensitivity = 0.001;
+
+                        state.camera.yaw += Rad(*dx as f32 * sensitivity);
+                        state.camera.pitch -= Rad(*dy as f32 * sensitivity);
+
+                        let pitch_limit = Rad(FRAC_PI_2 - 0.01);
+
+                        if state.camera.pitch > pitch_limit {
+                            state.camera.pitch = pitch_limit;
+                        } else if state.camera.pitch < -pitch_limit {
+                            state.camera.pitch = -pitch_limit;
+                        }
+                    }
+                }
+            }
             Event::WindowEvent { event, window_id } => match event {
                 WindowEvent::CloseRequested => {
                     if App::close_window(windows, window_id) {
@@ -148,6 +172,50 @@ fn main() {
                 }
                 WindowEvent::Resized(size) => {
                     App::resize_window(windows, window_id, size);
+                }
+                WindowEvent::KeyboardInput { event, .. } => {
+                    if let Some(state) = window_states.get_mut(window_id) {
+                        match event.state {
+                            ElementState::Pressed => {
+                                state.pressed_keys.insert(event.key_without_modifiers());
+                            }
+                            ElementState::Released => {
+                                state.pressed_keys.remove(&event.key_without_modifiers());
+                            }
+                        }
+                    }
+                }
+                WindowEvent::MouseInput {
+                    state: button_state,
+                    button,
+                    ..
+                } => {
+                    if let Some(window) = windows.get_mut(window_id).map(|w| w.window()) {
+                        if let Some(state) = window_states.get_mut(window_id) {
+                            match button {
+                                MouseButton::Right => match button_state {
+                                    ElementState::Pressed => {
+                                        window
+                                            .set_cursor_grab(CursorGrabMode::Locked)
+                                            .or_else(|_| {
+                                                window.set_cursor_grab(CursorGrabMode::Confined)
+                                            })
+                                            .ok();
+                                        window.set_cursor_visible(false);
+
+                                        state.mouse_captured = true;
+                                    }
+                                    ElementState::Released => {
+                                        window.set_cursor_grab(CursorGrabMode::None).ok();
+                                        window.set_cursor_visible(true);
+
+                                        state.mouse_captured = false;
+                                    }
+                                },
+                                _ => {}
+                            }
+                        }
+                    }
                 }
                 WindowEvent::RedrawRequested => {
                     if let Some(window) = windows.get_mut(window_id) {
@@ -167,17 +235,20 @@ fn main() {
                                 }
                             };
 
-                            angle += 0.01;
+                            let movements: Vec<(Key, Vector3<f32>)> = vec![
+                                (Key::Character("w".into()), state.camera.forward()),
+                                (Key::Character("s".into()), -state.camera.forward()),
+                                (Key::Character("a".into()), -state.camera.right()),
+                                (Key::Character("d".into()), state.camera.right()),
+                                (Key::Named(NamedKey::Space), state.camera.up()),
+                                (Key::Named(NamedKey::Shift), -state.camera.up()),
+                            ];
 
-                            if angle > TAU {
-                                angle -= TAU;
+                            for (key, direction) in movements {
+                                if state.pressed_keys.contains(&key) {
+                                    state.camera.position += direction * 0.01;
+                                }
                             }
-
-                            let x = radius * angle.cos();
-                            let z = radius * angle.sin();
-
-                            state.camera.position = Point3::new(x, 0.0, z);
-                            state.camera.yaw = Rad::atan2(z, x) + Rad(PI);
 
                             state.gpu_camera.update(
                                 frame.context.queue(),
