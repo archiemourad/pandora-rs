@@ -2,25 +2,17 @@ use log::{error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 use winit::{
     dpi::PhysicalSize,
-    event::Event,
-    event_loop::{EventLoop, EventLoopWindowTarget},
-    platform::pump_events::EventLoopExtPumpEvents,
+    event_loop::EventLoop,
     window::{WindowBuilder, WindowId},
 };
 
-use crate::{
-    context::{WGPUContext, WGPUContextBuilder},
-    error::{AppError, CreateWindowError},
-    window::Window,
-};
+use crate::{context::WGPUContext, error::CreateWindowError, window::Window};
 
-pub struct App<'w> {
-    pub context: Arc<WGPUContext>,
-    event_loop: EventLoop<()>,
+pub struct WindowManager<'w> {
     windows: HashMap<WindowId, Window<'w>>,
 }
 
-impl<'w> App<'w> {
+impl<'w> WindowManager<'w> {
     fn format_window_id(id: &WindowId) -> String {
         format!("{:?}", id)
             .chars()
@@ -28,21 +20,14 @@ impl<'w> App<'w> {
             .collect()
     }
 
-    pub fn new(builder: WGPUContextBuilder) -> Result<Self, AppError> {
-        info!("Initializing app...");
-
-        let context = Arc::new(builder.build()?);
-        let event_loop = EventLoop::new()?;
-
-        Ok(Self {
-            context,
-            event_loop,
+    pub fn new() -> Self {
+        Self {
             windows: HashMap::new(),
-        })
+        }
     }
 
-    pub fn event_loop(&self) -> &EventLoop<()> {
-        &self.event_loop
+    pub fn from(windows: HashMap<WindowId, Window<'w>>) -> Self {
+        Self { windows }
     }
 
     pub fn windows(&self) -> &HashMap<WindowId, Window<'w>> {
@@ -61,8 +46,9 @@ impl<'w> App<'w> {
         self.windows.get_mut(&id)
     }
 
-    pub fn add_window(
+    pub fn insert_window(
         &mut self,
+        context: Arc<WGPUContext>,
         window: winit::window::Window,
     ) -> Result<WindowId, CreateWindowError> {
         let window_id = window.id();
@@ -70,10 +56,8 @@ impl<'w> App<'w> {
         let title = window.title();
         let size = window.inner_size();
 
-        self.windows.insert(
-            window_id,
-            Window::new(self.context.clone(), Arc::new(window))?,
-        );
+        self.windows
+            .insert(window_id, Window::new(context, Arc::new(window))?);
 
         info!(
             "Created window: '{}' (id: {}, size: {}x{})",
@@ -86,52 +70,51 @@ impl<'w> App<'w> {
         Ok(window_id)
     }
 
-    pub fn add_window_with_builder(
+    pub fn insert_window_with_builder(
         &mut self,
+        context: Arc<WGPUContext>,
+        event_loop: &EventLoop<()>,
         builder: WindowBuilder,
     ) -> Result<WindowId, CreateWindowError> {
-        self.add_window(builder.build(&self.event_loop)?)
+        let window = builder.build(event_loop)?;
+
+        self.insert_window(context, window)
     }
 
-    pub fn poll_events<F>(&mut self, mut event_handler: F)
-    where
-        F: FnMut(&Event<()>, &EventLoopWindowTarget<()>, &mut HashMap<WindowId, Window<'w>>),
-    {
-        self.event_loop.pump_events(None, |event, elwt| {
-            event_handler(&event, elwt, &mut self.windows);
-        });
-    }
+    pub fn close_window(&mut self, id: &WindowId) -> bool {
+        let title = self
+            .window(id)
+            .map_or("<unknown>".to_string(), |w| format!("'{}'", w.title()));
 
-    pub fn close_window(windows: &mut HashMap<WindowId, Window<'w>>, id: &WindowId) -> bool {
         info!(
             "Request to close window: {} (id: {})",
-            windows
-                .get(id)
-                .map_or("Unknown".to_string(), |w| format!("'{}'", w.title())),
-            Self::format_window_id(id)
+            title,
+            Self::format_window_id(&id)
         );
 
-        windows.remove(id);
+        if self.windows.remove(id).is_some() {
+            info!(
+                "Closed window: {} (id: {})",
+                title,
+                Self::format_window_id(&id)
+            );
+        } else {
+            warn!("No window found with id: {}", Self::format_window_id(&id));
+        }
 
-        windows.is_empty()
+        self.windows.is_empty()
     }
 
-    pub fn resize_window(
-        windows: &mut HashMap<WindowId, Window<'w>>,
-        id: &WindowId,
-        size: &PhysicalSize<u32>,
-    ) {
-        if let Some(window) = windows.get_mut(id) {
-            window.resize(*size);
+    pub fn resize_window(&mut self, id: &WindowId, size: PhysicalSize<u32>) {
+        if let Some(window) = self.window_mut(id) {
+            window.resize(size);
+        } else {
+            warn!("No window found with id: {}", Self::format_window_id(&id));
         }
     }
 
-    pub fn handle_redraw_error(
-        windows: &mut HashMap<WindowId, Window<'w>>,
-        id: &WindowId,
-        error: wgpu::SurfaceError,
-    ) -> bool {
-        if let Some(window) = windows.get_mut(id) {
+    pub fn handle_redraw_error(&mut self, id: &WindowId, error: wgpu::SurfaceError) -> bool {
+        if let Some(window) = self.window_mut(id) {
             match error {
                 wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated => {
                     warn!(
@@ -164,10 +147,7 @@ impl<'w> App<'w> {
                 }
             }
         } else {
-            warn!(
-                "Received redraw error for unknown window (id: {}), ignoring...",
-                Self::format_window_id(id)
-            );
+            warn!("No window found with id: {}", Self::format_window_id(&id));
 
             false
         }

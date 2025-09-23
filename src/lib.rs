@@ -1,4 +1,3 @@
-pub mod app;
 pub mod camera;
 pub mod context;
 pub mod drawable;
@@ -9,3 +8,4 @@ pub mod pipeline;
 pub mod texture;
 pub mod vertex;
 pub mod window;
+pub mod window_manager;

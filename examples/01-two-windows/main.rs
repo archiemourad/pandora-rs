@@ -1,53 +1,61 @@
+use std::sync::Arc;
 use winit::{
     dpi::PhysicalSize,
     event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
-use pandora::{app::App, context::WGPUContextBuilder};
+use pandora::{context::WGPUContextBuilder, window_manager::WindowManager};
 
 fn main() {
     env_logger::init();
 
-    let mut app = App::new(WGPUContextBuilder::new()).expect("Failed to create app");
+    let context = Arc::new(
+        WGPUContextBuilder::new()
+            .build()
+            .expect("Failed to create WGPU context"),
+    );
+
+    let event_loop = EventLoop::new().expect("Failed to create event loop");
+    let mut windows = WindowManager::new();
 
     let (width, height) = (800, 600);
 
     for i in 0..2 {
-        app.add_window_with_builder(
-            WindowBuilder::new()
-                .with_title(format!("Simple Window {}", i + 1))
-                .with_inner_size(PhysicalSize::new(width, height)),
-        )
-        .expect(format!("Failed to add window {}", i + 1).as_str());
+        windows
+            .insert_window_with_builder(
+                context.clone(),
+                &event_loop,
+                WindowBuilder::new()
+                    .with_title(format!("Window {}", i + 1))
+                    .with_inner_size(PhysicalSize::new(width, height)),
+            )
+            .expect(format!("Failed to create window {}", i + 1).as_str());
     }
 
-    let mut running = true;
+    event_loop.set_control_flow(ControlFlow::Poll);
 
-    while running {
-        app.poll_events(|event, elwt, windows| match event {
-            Event::WindowEvent { event, window_id } => match event {
+    event_loop
+        .run(move |event, elwt| match event {
+            Event::WindowEvent { window_id, event } => match event {
                 WindowEvent::CloseRequested => {
-                    if App::close_window(windows, window_id) {
+                    if windows.close_window(&window_id) {
                         elwt.exit();
-
-                        running = false;
                     }
                 }
                 WindowEvent::Resized(size) => {
-                    App::resize_window(windows, window_id, size);
+                    windows.resize_window(&window_id, size);
                 }
                 WindowEvent::RedrawRequested => {
-                    if let Some(window) = windows.get_mut(window_id) {
+                    if let Some(window) = windows.window_mut(&window_id) {
                         window.window().request_redraw();
 
                         let mut frame = match window.frame() {
                             Ok(frame) => frame,
                             Err(e) => {
-                                if App::handle_redraw_error(windows, window_id, e) {
+                                if windows.handle_redraw_error(&window_id, e) {
                                     elwt.exit();
-
-                                    running = false;
                                 }
 
                                 return;
@@ -82,6 +90,6 @@ fn main() {
                 _ => {}
             },
             _ => {}
-        });
-    }
+        })
+        .expect("Failed to run event loop");
 }

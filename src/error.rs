@@ -9,14 +9,6 @@ pub enum WGPUContextError {
 }
 
 #[derive(Error, Debug)]
-pub enum AppError {
-    #[error(transparent)]
-    EventLoopError(#[from] winit::error::EventLoopError),
-    #[error(transparent)]
-    WGPUContextError(#[from] WGPUContextError),
-}
-
-#[derive(Error, Debug)]
 pub enum WindowError {
     #[error("Failed to create surface: {0:?}")]
     CreateSurfaceError(#[from] wgpu::CreateSurfaceError),
