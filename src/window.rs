@@ -1,7 +1,7 @@
 use std::{iter::once, sync::Arc};
 use winit::dpi::PhysicalSize;
 
-use crate::{context::WGPUContext, drawable::Drawable, error::WindowError};
+use crate::{context::WGPUContext, error::WindowError};
 
 pub struct Frame<'a> {
     pub context: &'a WGPUContext,
@@ -22,7 +22,6 @@ pub struct Window<'w> {
     window: Arc<winit::window::Window>,
     surface: wgpu::Surface<'w>,
     config: wgpu::SurfaceConfiguration,
-    drawables: Vec<Arc<dyn Drawable>>,
 }
 
 impl<'w> Window<'w> {
@@ -63,7 +62,6 @@ impl<'w> Window<'w> {
             window,
             surface,
             config,
-            drawables: Vec::new(),
         })
     }
 
@@ -89,14 +87,6 @@ impl<'w> Window<'w> {
 
     pub fn size(&self) -> PhysicalSize<u32> {
         self.window.inner_size()
-    }
-
-    pub fn drawables(&self) -> &[Arc<dyn Drawable>] {
-        &self.drawables
-    }
-
-    pub fn drawables_mut(&mut self) -> &mut Vec<Arc<dyn Drawable>> {
-        &mut self.drawables
     }
 
     pub fn configure(&mut self, config: &wgpu::SurfaceConfiguration) {

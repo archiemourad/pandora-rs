@@ -8,30 +8,8 @@ pub trait Drawable {
 
 #[derive(Clone)]
 pub struct Model {
-    mesh: Arc<Mesh>,
-    material: Arc<Material>,
-}
-
-impl Model {
-    pub fn new(mesh: Arc<Mesh>, material: Arc<Material>) -> Self {
-        Self { mesh, material }
-    }
-
-    pub fn mesh(&self) -> &Arc<Mesh> {
-        &self.mesh
-    }
-
-    pub fn set_mesh(&mut self, mesh: Arc<Mesh>) {
-        self.mesh = mesh;
-    }
-
-    pub fn material(&self) -> &Arc<Material> {
-        &self.material
-    }
-
-    pub fn set_material(&mut self, material: Arc<Material>) {
-        self.material = material;
-    }
+    pub mesh: Arc<Mesh>,
+    pub material: Arc<Material>,
 }
 
 impl Drawable for Model {
