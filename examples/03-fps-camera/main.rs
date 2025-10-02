@@ -1,4 +1,4 @@
-use cgmath::{Deg, Rad, Vector3};
+use cgmath::{Deg, Quaternion, Rad, Rotation3, Vector3};
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::FRAC_PI_2,
@@ -16,9 +16,10 @@ use winit::{
 use pandora::{
     camera::{Camera, GPUCamera, Projection},
     context::WGPUContextBuilder,
-    drawable::Drawable,
+    instance_group::InstanceGroup,
     pipeline::PipelineBuilder,
     texture::Texture,
+    transform::{GPUTransform, Transform},
     vertex::VertexLayout,
     window_manager::WindowManager,
 };
@@ -68,7 +69,7 @@ fn main() {
             "fs_main",
             wgpu::TextureFormat::Bgra8UnormSrgb,
         )
-        .with_vertex_buffers(vec![Vertex::layout()])
+        .with_vertex_buffers(vec![Vertex::layout(), GPUTransform::layout()])
         .with_bind_group_layouts(&[
             &texture.bind_group_layout(),
             &gpu_camera.bind_group_layout(),
@@ -81,6 +82,13 @@ fn main() {
         pipeline.clone(),
         texture.bind_group().clone(),
     );
+
+    let transforms = vec![Transform {
+        position: Vector3::new(0.0, 0.0, 0.0),
+        rotation: Quaternion::from_angle_y(Deg(0.0)),
+    }];
+
+    let instance_group = InstanceGroup::new(context.device(), &transforms);
 
     let mut states = HashMap::new();
 
@@ -242,7 +250,7 @@ fn main() {
 
                                 render_pass.set_bind_group(1, &state.gpu_camera.bind_group(), &[]);
 
-                                shape.draw(&mut render_pass);
+                                instance_group.draw(&mut render_pass, &shape);
                             }
 
                             frame.present();

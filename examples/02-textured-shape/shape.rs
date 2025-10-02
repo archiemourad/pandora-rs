@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use pandora::{drawable::Model, material::Material, mesh::Mesh};
+use pandora::{material::Material, mesh::Mesh, model::Model};
 
 use crate::vertex::Vertex;
 

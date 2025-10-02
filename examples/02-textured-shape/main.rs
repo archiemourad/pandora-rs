@@ -1,3 +1,4 @@
+use cgmath::{Deg, Quaternion, Rotation3, Vector3};
 use std::sync::Arc;
 use winit::{
     dpi::PhysicalSize,
@@ -7,8 +8,13 @@ use winit::{
 };
 
 use pandora::{
-    context::WGPUContextBuilder, drawable::Drawable, pipeline::PipelineBuilder, texture::Texture,
-    vertex::VertexLayout, window_manager::WindowManager,
+    context::WGPUContextBuilder,
+    instance_group::InstanceGroup,
+    pipeline::PipelineBuilder,
+    texture::Texture,
+    transform::{GPUTransform, Transform},
+    vertex::VertexLayout,
+    window_manager::WindowManager,
 };
 
 mod shape;
@@ -43,7 +49,7 @@ fn main() {
             "fs_main",
             wgpu::TextureFormat::Bgra8UnormSrgb,
         )
-        .with_vertex_buffers(vec![Vertex::layout()])
+        .with_vertex_buffers(vec![Vertex::layout(), GPUTransform::layout()])
         .with_bind_group_layouts(&[&texture.bind_group_layout()])
         .build(),
     );
@@ -53,6 +59,13 @@ fn main() {
         pipeline.clone(),
         texture.bind_group().clone(),
     );
+
+    let transforms = vec![Transform {
+        position: Vector3::new(0.0, 0.0, 0.0),
+        rotation: Quaternion::from_angle_y(Deg(0.0)),
+    }];
+
+    let instance_group = InstanceGroup::new(context.device(), &transforms);
 
     let (width, height) = (800, 600);
 
@@ -117,7 +130,7 @@ fn main() {
                                         timestamp_writes: None,
                                     });
 
-                            shape.draw(&mut render_pass);
+                            instance_group.draw(&mut render_pass, &shape);
                         }
 
                         frame.present();

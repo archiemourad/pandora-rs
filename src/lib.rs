@@ -1,11 +1,13 @@
 pub mod camera;
 pub mod context;
-pub mod drawable;
 pub mod error;
+pub mod instance_group;
 pub mod material;
 pub mod mesh;
+pub mod model;
 pub mod pipeline;
 pub mod texture;
+pub mod transform;
 pub mod vertex;
 pub mod window;
 pub mod window_manager;
