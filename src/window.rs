@@ -25,6 +25,30 @@ pub struct Window<'w> {
 }
 
 impl<'w> Window<'w> {
+    pub fn window(&self) -> &Arc<winit::window::Window> {
+        &self.window
+    }
+
+    pub fn title(&self) -> String {
+        self.window.title()
+    }
+
+    pub fn surface(&self) -> &wgpu::Surface<'w> {
+        &self.surface
+    }
+
+    pub fn get_capabilities(&self) -> wgpu::SurfaceCapabilities {
+        self.surface.get_capabilities(&self.context.adapter())
+    }
+
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
+    }
+
+    pub fn size(&self) -> PhysicalSize<u32> {
+        self.window.inner_size()
+    }
+
     pub fn new(
         context: Arc<WGPUContext>,
         window: Arc<winit::window::Window>,
@@ -65,30 +89,6 @@ impl<'w> Window<'w> {
         })
     }
 
-    pub fn window(&self) -> &Arc<winit::window::Window> {
-        &self.window
-    }
-
-    pub fn title(&self) -> String {
-        self.window.title()
-    }
-
-    pub fn surface(&self) -> &wgpu::Surface<'w> {
-        &self.surface
-    }
-
-    pub fn get_capabilities(&self) -> wgpu::SurfaceCapabilities {
-        self.surface.get_capabilities(&self.context.adapter())
-    }
-
-    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
-        &self.config
-    }
-
-    pub fn size(&self) -> PhysicalSize<u32> {
-        self.window.inner_size()
-    }
-
     pub fn configure(&mut self, config: &wgpu::SurfaceConfiguration) {
         self.config = config.clone();
         self.surface.configure(&self.context.device(), &self.config);
@@ -111,10 +111,12 @@ impl<'w> Window<'w> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let encoder = self
-            .context
-            .device()
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+        let encoder =
+            self.context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Frame Command Encoder"),
+                });
 
         Ok(Frame {
             context: &self.context,

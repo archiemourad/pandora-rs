@@ -29,7 +29,7 @@ impl<'a> PipelineBuilder<'a> {
             vs_entry,
             fs_entry,
             layout_desc: wgpu::PipelineLayoutDescriptor {
-                label: None,
+                label: Some("Pipeline Layout"),
                 bind_group_layouts: &[],
                 push_constant_ranges: &[],
             },
@@ -114,7 +114,7 @@ impl<'a> PipelineBuilder<'a> {
 
         self.device
             .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: None,
+                label: Some("Render Pipeline"),
                 layout: Some(&layout),
                 vertex: wgpu::VertexState {
                     module: &shader,

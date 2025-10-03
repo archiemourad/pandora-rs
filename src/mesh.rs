@@ -2,6 +2,7 @@ use wgpu::util::DeviceExt;
 
 use crate::vertex::VertexLayout;
 
+#[derive(Debug)]
 pub struct Mesh {
     vertex_buffer: wgpu::Buffer,
     index_buffer: Option<wgpu::Buffer>,
@@ -10,6 +11,22 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    pub fn vertex_buffer(&self) -> &wgpu::Buffer {
+        &self.vertex_buffer
+    }
+
+    pub fn index_buffer(&self) -> Option<&wgpu::Buffer> {
+        self.index_buffer.as_ref()
+    }
+
+    pub fn vertex_count(&self) -> u32 {
+        self.vertex_count
+    }
+
+    pub fn index_count(&self) -> u32 {
+        self.index_count
+    }
+
     pub fn new<T: VertexLayout>(
         device: &wgpu::Device,
         vertices: &[T],
@@ -17,14 +34,14 @@ impl Mesh {
         usage: wgpu::BufferUsages,
     ) -> Self {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
+            label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(vertices),
             usage,
         });
 
         let (index_buffer, index_count) = if let Some(indices) = indices {
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("Index Buffer"),
                 contents: bytemuck::cast_slice(indices),
                 usage,
             });
@@ -42,10 +59,6 @@ impl Mesh {
         }
     }
 
-    pub fn vertex_buffer(&self) -> &wgpu::Buffer {
-        &self.vertex_buffer
-    }
-
     pub fn set_vertices<T: VertexLayout>(
         &mut self,
         device: &wgpu::Device,
@@ -53,17 +66,13 @@ impl Mesh {
         usage: wgpu::BufferUsages,
     ) {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
+            label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(vertices),
             usage,
         });
 
         self.vertex_buffer = vertex_buffer;
         self.vertex_count = vertices.len() as u32;
-    }
-
-    pub fn index_buffer(&self) -> Option<&wgpu::Buffer> {
-        self.index_buffer.as_ref()
     }
 
     pub fn set_indices(
@@ -74,7 +83,7 @@ impl Mesh {
     ) {
         if let Some(indices) = indices {
             let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: None,
+                label: Some("Index Buffer"),
                 contents: bytemuck::cast_slice(indices),
                 usage,
             });
@@ -85,13 +94,5 @@ impl Mesh {
             self.index_buffer = None;
             self.index_count = 0;
         }
-    }
-
-    pub fn vertex_count(&self) -> u32 {
-        self.vertex_count
-    }
-
-    pub fn index_count(&self) -> u32 {
-        self.index_count
     }
 }

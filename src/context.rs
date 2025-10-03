@@ -47,7 +47,7 @@ impl<'a, 'b> Default for WGPUContextBuilder<'a, 'b> {
             device_desc: wgpu::DeviceDescriptor {
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
-                label: None,
+                label: Some("Device"),
                 memory_hints: Default::default(),
             },
         }

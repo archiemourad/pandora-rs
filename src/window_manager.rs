@@ -20,16 +20,6 @@ impl<'w> WindowManager<'w> {
             .collect()
     }
 
-    pub fn new() -> Self {
-        Self {
-            windows: HashMap::new(),
-        }
-    }
-
-    pub fn from(windows: HashMap<WindowId, Window<'w>>) -> Self {
-        Self { windows }
-    }
-
     pub fn windows(&self) -> &HashMap<WindowId, Window<'w>> {
         &self.windows
     }
@@ -44,6 +34,16 @@ impl<'w> WindowManager<'w> {
 
     pub fn window_mut(&mut self, id: &WindowId) -> Option<&mut Window<'w>> {
         self.windows.get_mut(&id)
+    }
+
+    pub fn new() -> Self {
+        Self {
+            windows: HashMap::new(),
+        }
+    }
+
+    pub fn from(windows: HashMap<WindowId, Window<'w>>) -> Self {
+        Self { windows }
     }
 
     pub fn insert_window(

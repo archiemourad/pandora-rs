@@ -51,10 +51,11 @@ impl Shape {
             wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
         ));
 
-        let material = Arc::new(Material {
+        let material = Arc::new(Material::new(
+            "Shape Material",
             pipeline,
-            diffuse_bind_group: texture_bind_group,
-        });
+            texture_bind_group,
+        ));
 
         Model { mesh, material }
     }

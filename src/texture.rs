@@ -1,6 +1,7 @@
 use image::GenericImageView;
 use std::sync::Arc;
 
+#[derive(Debug)]
 pub struct Texture {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
@@ -46,7 +47,7 @@ impl Texture {
         };
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: None,
+            label: Some("Diffuse Texture"),
             size,
             mip_level_count: 1,
             sample_count: 1,
@@ -86,6 +87,7 @@ impl Texture {
 
         let bind_group_layout = Arc::new(device.create_bind_group_layout(
             &wgpu::BindGroupLayoutDescriptor {
+                label: Some("Texture Bind Group Layout"),
                 entries: &[
                     wgpu::BindGroupLayoutEntry {
                         binding: 0,
@@ -104,11 +106,11 @@ impl Texture {
                         count: None,
                     },
                 ],
-                label: None,
             },
         ));
 
         let bind_group = Arc::new(device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Texture Bind Group"),
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry {
@@ -120,7 +122,6 @@ impl Texture {
                     resource: wgpu::BindingResource::Sampler(&sampler),
                 },
             ],
-            label: None,
         }));
 
         Self {
@@ -138,7 +139,6 @@ impl Texture {
         bytes: &[u8],
     ) -> Result<Self, image::ImageError> {
         let image = image::load_from_memory(bytes)?;
-
         Ok(Self::from_image(device, queue, &image))
     }
 }
